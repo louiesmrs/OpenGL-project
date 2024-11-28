@@ -7,7 +7,7 @@
 
 // GLTF model loader
 #define TINYGLTF_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
+// #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <tiny_gltf.h>
 
@@ -15,9 +15,11 @@
 
 #include <vector>
 #include <iostream>
+#include <string>
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include "camera.h"
+#include "skybox.h"
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
@@ -404,7 +406,7 @@ struct MyBot {
 
 	void initialize() {
 		// Modify your path if needed
-		if (!loadModel(model, "../src/model/flop/gas.gltf")) {
+		if (!loadModel(model, "../src/model/bot/bot.gltf")) {
 			return;
 		}
 
@@ -692,7 +694,16 @@ int main(void)
 	MyBot bot;
 	bot.initialize();
 
-	// Camera setup
+	Skybox skybox;
+	std::vector<std::string> faces = {
+		"../src/texture/skybox/right.jpg",
+		"../src/texture/skybox/left.jpg",
+		"../src/texture/skybox/top.jpg",
+		"../src/texture/skybox/bottom.jpg",
+		"../src/texture/skybox/front.jpg",
+		"../src/texture/skybox/back.jpg"
+	};
+	skybox.initialize(faces, "../src/shader/skybox.vert", "../src/shader/skybox.frag");
    
 
 	// Time and frame rate tracking
@@ -722,6 +733,11 @@ int main(void)
 		viewMatrix = camera.GetViewMatrix();
 		glm::mat4 vp = projectionMatrix * viewMatrix;
 		bot.render(vp);
+
+		viewMatrix = glm::mat4(glm::mat3(camera.GetViewMatrix()));
+		vp = projectionMatrix * viewMatrix;
+		skybox.render(vp);
+
 
 		// FPS tracking 
 		// Count number of frames over a few seconds and take average

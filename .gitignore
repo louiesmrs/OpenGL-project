@@ -1,4 +1,4 @@
-build/
+build/*
 external/
 .vscode/*
 .DS_Store

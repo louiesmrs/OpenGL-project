@@ -15,12 +15,14 @@ include_directories(
 	external/glm-0.9.7.1/
 	external/glad-opengl-3.3/include/
 	external/tinygltf-2.9.3/
+	external/
 	src/
 )
 
 add_executable(project_scene
 	src/lab4_character.cpp
 	src/camera.cpp
+	src/skybox.cpp
 	src/render/shader.cpp
 )
 target_link_libraries(project_scene
