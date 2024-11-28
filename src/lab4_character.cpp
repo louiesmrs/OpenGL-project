@@ -31,7 +31,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 static void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 
 // Camera
-static glm::vec3 eye_center(50.0f, 500.0f, 300.0f);
+static glm::vec3 eye_center(0.0f, 100.0f, 800.0f);
 static glm::vec3 lookat(0.0f, 0.0f, 0.0f);
 static glm::vec3 up(0.0f, 1.0f, 0.0f);
 static float FoV = 45.0f;
@@ -734,8 +734,8 @@ int main(void)
 		glm::mat4 vp = projectionMatrix * viewMatrix;
 		bot.render(vp);
 
-		viewMatrix = glm::mat4(glm::mat3(camera.GetViewMatrix()));
-		vp = projectionMatrix * viewMatrix;
+		// viewMatrix = glm::mat4(glm::mat3(camera.GetViewMatrix()));
+		// vp = projectionMatrix * viewMatrix;
 		skybox.render(vp);
 
 

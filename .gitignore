@@ -1,5 +1,5 @@
 build/*
-external/
+external/*
 .vscode/*
 .DS_Store
 .git

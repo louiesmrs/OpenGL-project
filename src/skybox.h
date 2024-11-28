@@ -21,6 +21,7 @@ public:
     GLuint programID;
     GLuint mvpMatrixID;
     GLuint textureSamplerID;
+    GLuint indexBufferID;
     // constructor
     Skybox();
 
