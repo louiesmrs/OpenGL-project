@@ -20,6 +20,7 @@
 #include <math.h>
 #include "camera.h"
 #include "skybox.h"
+#include "lab1_cube.h"
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
@@ -31,12 +32,12 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 static void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 
 // Camera
-static glm::vec3 eye_center(0.0f, 100.0f, 800.0f);
+static glm::vec3 eye_center(-15.0f, 10.0f, 0.0f);
 static glm::vec3 lookat(0.0f, 0.0f, 0.0f);
 static glm::vec3 up(0.0f, 1.0f, 0.0f);
 static float FoV = 45.0f;
-static float zNear = 100.0f;
-static float zFar = 1500.0f; 
+static float zNear = 0.1f;
+static float zFar = 250.0f; 
 
 Camera camera(eye_center);
 float deltaTime = 0.0f;
@@ -59,8 +60,12 @@ struct MyBot {
 	GLuint lightPositionID;
 	GLuint lightIntensityID;
 	GLuint programID;
+	GLuint useSkinningID;
 
 	tinygltf::Model model;
+
+	glm::mat4 transform;
+	bool use_skinning;
 
 	// Each VAO corresponds to each mesh primitive in the GLTF model
 	struct PrimitiveObject {
@@ -404,9 +409,10 @@ struct MyBot {
 		return res;
 	}
 
-	void initialize() {
+	MyBot(const char * modelPath, bool use_skinning = false, 
+		const glm::mat4& transform = glm::mat4(1.0)) : transform(transform), use_skinning(use_skinning) {
 		// Modify your path if needed
-		if (!loadModel(model, "../src/model/bot/bot.gltf")) {
+		if (!loadModel(model, modelPath)) {
 			return;
 		}
 
@@ -433,6 +439,8 @@ struct MyBot {
 
 		// Get a handle for joint matrices
 		jointMatricesID = glGetUniformLocation(programID, "jointMat");
+		useSkinningID = glGetUniformLocation(programID, "useSkinning");
+		
 	}
 
 	void bindMesh(std::vector<PrimitiveObject> &primitiveObjects,
@@ -624,13 +632,18 @@ struct MyBot {
 		glUseProgram(programID);
 		
 		// Set camera
-		glm::mat4 mvp = cameraMatrix;
+		glm::mat4 mvp = cameraMatrix * transform;
 		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
 
 		// -----------------------------------------------------------------
 		// Set animation data for linear blend skinning in shader
 		// -----------------------------------------------------------------
-		glUniformMatrix4fv(jointMatricesID, skinObjects[0].jointMatrices.size(), GL_FALSE, glm::value_ptr(skinObjects[0].jointMatrices[0]));
+		
+		
+		if(use_skinning) {
+			glUniformMatrix4fv(jointMatricesID, skinObjects[0].jointMatrices.size(), GL_FALSE, glm::value_ptr(skinObjects[0].jointMatrices[0]));
+		}
+		glUniform1i(useSkinningID, use_skinning);
 		// -----------------------------------------------------------------
 
 		// Set light data 
@@ -646,6 +659,304 @@ struct MyBot {
 		glDeleteProgram(programID);
 	}
 }; 
+
+struct AxisXYZ {
+    // A structure for visualizing the global 3D coordinate system 
+	
+	GLfloat vertex_buffer_data[18] = {
+		// X axis
+		0.0, 0.0f, 0.0f, 
+		100.0f, 0.0f, 0.0f,
+		
+		// Y axis
+		0.0f, 0.0f, 0.0f, 
+		0.0f, 100.0f, 0.0f, 
+		
+		// Z axis
+		0.0f, 0.0f, 0.0f, 
+		0.0f, 0.0f, 100.0f,
+	};
+
+	GLfloat color_buffer_data[18] = {
+		// X, red
+		1.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 0.0f,
+
+		// Y, green
+		0.0f, 1.0f, 0.0f, 
+		0.0f, 1.0f, 0.0f,
+
+		// Z, blue
+		0.0f, 0.0f, 1.0f, 
+		0.0f, 0.0f, 1.0f,
+	};
+
+	// OpenGL buffers
+	GLuint vertexArrayID; 
+	GLuint vertexBufferID; 
+	GLuint colorBufferID;
+
+	// Shader variable IDs
+	GLuint mvpMatrixID;
+	GLuint programID;
+
+	void initialize() {
+		// Create a vertex array object
+		glGenVertexArrays(1, &vertexArrayID);
+		glBindVertexArray(vertexArrayID);
+
+		// Create a vertex buffer object to store the vertex data		
+		glGenBuffers(1, &vertexBufferID);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_buffer_data), vertex_buffer_data, GL_STATIC_DRAW);
+
+		// Create a vertex buffer object to store the color data
+		glGenBuffers(1, &colorBufferID);
+		glBindBuffer(GL_ARRAY_BUFFER, colorBufferID);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(color_buffer_data), color_buffer_data, GL_STATIC_DRAW);
+
+		// Create and compile our GLSL program from the shaders
+		programID = LoadShadersFromString(cubeVertexShader, cubeFragmentShader);
+		if (programID == 0)
+		{
+			std::cerr << "Failed to load shaders." << std::endl;
+		}
+
+		// Get a handle for our "MVP" uniform
+		mvpMatrixID = glGetUniformLocation(programID, "MVP");
+	}
+
+	void render(glm::mat4 cameraMatrix) {
+		glUseProgram(programID);
+
+		glEnableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+		glEnableVertexAttribArray(1);
+		glBindBuffer(GL_ARRAY_BUFFER, colorBufferID);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+		glm::mat4 mvp = cameraMatrix;
+		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
+
+        // Draw the lines
+        glDrawArrays(GL_LINES, 0, 6);
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+	}
+
+	void cleanup() {
+		glDeleteBuffers(1, &vertexBufferID);
+		glDeleteBuffers(1, &colorBufferID);
+		glDeleteVertexArrays(1, &vertexArrayID);
+		glDeleteProgram(programID);
+	}
+}; 
+
+struct Box {
+	glm::vec3 position;			// Position of the box 
+	glm::vec3 scale;			// Size of the box in each axis
+	glm::float32 rotationRadian;
+	glm::vec3 rotationAxis;
+
+	GLfloat vertex_buffer_data[72] = {	// Vertex definition for a canonical box
+		// Front face
+		-1.0f, -1.0f, 1.0f, 
+		1.0f, -1.0f, 1.0f, 
+		1.0f, 1.0f, 1.0f, 
+		-1.0f, 1.0f, 1.0f, 
+		
+		// Back face 
+		1.0f, -1.0f, -1.0f, 
+		-1.0f, -1.0f, -1.0f, 
+		-1.0f, 1.0f, -1.0f, 
+		1.0f, 1.0f, -1.0f,
+		
+		// Left face
+		-1.0f, -1.0f, -1.0f, 
+		-1.0f, -1.0f, 1.0f, 
+		-1.0f, 1.0f, 1.0f, 
+		-1.0f, 1.0f, -1.0f, 
+
+		// Right face 
+		1.0f, -1.0f, 1.0f, 
+		1.0f, -1.0f, -1.0f, 
+		1.0f, 1.0f, -1.0f, 
+		1.0f, 1.0f, 1.0f,
+
+		// Top face
+		-1.0f, 1.0f, 1.0f, 
+		1.0f, 1.0f, 1.0f, 
+		1.0f, 1.0f, -1.0f, 
+		-1.0f, 1.0f, -1.0f, 
+
+		// Bottom face
+		-1.0f, -1.0f, -1.0f, 
+		1.0f, -1.0f, -1.0f, 
+		1.0f, -1.0f, 1.0f, 
+		-1.0f, -1.0f, 1.0f, 
+	};
+
+	GLfloat color_buffer_data[72] = {
+		// Front, red
+		1.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 0.0f,
+
+		// Back, yellow
+		1.0f, 1.0f, 0.0f,
+		1.0f, 1.0f, 0.0f,
+		1.0f, 1.0f, 0.0f,
+		1.0f, 1.0f, 0.0f,
+
+		// Left, green
+		0.0f, 1.0f, 0.0f, 
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+
+		// Right, cyan
+		0.0f, 1.0f, 1.0f, 
+		0.0f, 1.0f, 1.0f, 
+		0.0f, 1.0f, 1.0f, 
+		0.0f, 1.0f, 1.0f, 
+
+		// Top, blue
+		0.0f, 0.0f, 1.0f, 
+		0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 1.0f,
+
+		// Bottom, magenta
+		1.0f, 0.0f, 1.0f,
+		1.0f, 0.0f, 1.0f, 
+		1.0f, 0.0f, 1.0f, 
+		1.0f, 0.0f, 1.0f,  
+	};
+
+	GLuint index_buffer_data[36] = {		// 12 triangle faces of a box
+		0, 1, 2, 	
+		0, 2, 3, 
+		
+		4, 5, 6, 
+		4, 6, 7, 
+
+		8, 9, 10, 
+		8, 10, 11, 
+
+		12, 13, 14, 
+		12, 14, 15, 
+
+		16, 17, 18, 
+		16, 18, 19, 
+
+		20, 21, 22, 
+		20, 22, 23, 
+	};
+    
+	// OpenGL buffers
+	GLuint vertexArrayID; 
+	GLuint vertexBufferID; 
+	GLuint indexBufferID; 
+	GLuint colorBufferID;
+
+	// Shader variable IDs
+	GLuint mvpMatrixID;
+	GLuint programID;
+
+	void setRotationRadian(glm::float32 radian) {
+		this->rotationRadian = radian;
+	}
+	glm::float32 getRotationRadian() {
+		return this->rotationRadian;
+	}
+
+	void initialize(glm::vec3 position, glm::vec3 scale, glm::float32 rotationRadian, glm::vec3 rotationAxis) {
+		// Define scale of the box geometry
+		this->position = position;
+		this->scale = scale;
+		this->rotationRadian = rotationRadian;
+		this->rotationAxis = rotationAxis;
+
+		// Create a vertex array object
+		glGenVertexArrays(1, &vertexArrayID);
+		glBindVertexArray(vertexArrayID);
+
+		// Create a vertex buffer object to store the vertex data		
+		glGenBuffers(1, &vertexBufferID);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_buffer_data), vertex_buffer_data, GL_STATIC_DRAW);
+
+		// Create a vertex buffer object to store the color data
+		glGenBuffers(1, &colorBufferID);
+		glBindBuffer(GL_ARRAY_BUFFER, colorBufferID);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(color_buffer_data), color_buffer_data, GL_STATIC_DRAW);
+
+		// Create an index buffer object to store the index data that defines triangle faces
+		glGenBuffers(1, &indexBufferID);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index_buffer_data), index_buffer_data, GL_STATIC_DRAW);
+		
+		// Create and compile our GLSL program from the shaders
+		programID = LoadShadersFromString(cubeVertexShader, cubeFragmentShader);
+		if (programID == 0)
+		{
+			std::cerr << "Failed to load shaders." << std::endl;
+		}
+
+		// Get a handle for our "MVP" uniform
+		mvpMatrixID = glGetUniformLocation(programID, "MVP");
+	}
+
+	void render(glm::mat4 cameraMatrix) {
+		glUseProgram(programID);
+
+		glEnableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+		glEnableVertexAttribArray(1);
+		glBindBuffer(GL_ARRAY_BUFFER, colorBufferID);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+
+		// TODO: Model transform 
+		// ------------------------------------
+        glm::mat4 modelMatrix = glm::mat4();
+		modelMatrix = glm::translate(modelMatrix, position);
+		modelMatrix = glm::scale(modelMatrix, scale);
+		modelMatrix = glm::rotate(modelMatrix, rotationRadian, rotationAxis);
+
+		// TODO: Set model-view-projection matrix
+		glm::mat4 mvp = cameraMatrix * modelMatrix;
+		// ------------------------------------
+		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
+
+		// Draw the box
+		glDrawElements(
+			GL_TRIANGLES,      // mode
+			36,    			   // number of indices
+			GL_UNSIGNED_INT,   // type
+			(void*)0           // element array buffer offset
+		);
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+	}
+
+	void cleanup() {
+		glDeleteBuffers(1, &vertexBufferID);
+		glDeleteBuffers(1, &colorBufferID);
+		glDeleteBuffers(1, &indexBufferID);
+		glDeleteVertexArrays(1, &vertexArrayID);
+		glDeleteProgram(programID);
+	}
+}; 
+
 
 int main(void)
 {
@@ -688,11 +999,23 @@ int main(void)
 	glClearColor(0.2f, 0.2f, 0.25f, 0.0f);
 
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
+	//glEnable(GL_CULL_FACE);
 
 	// Our 3D character
-	MyBot bot;
-	bot.initialize();
+	glm::mat4 modelMatrix = glm::mat4();
+	modelMatrix = glm::translate(modelMatrix, glm::vec3(20.0f,0.0f,10.0f));
+	modelMatrix = glm::scale(modelMatrix, glm::vec3(0.1f,0.1f,0.1f));
+	modelMatrix = glm::rotate(modelMatrix, glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
+	MyBot bot("../src/model/flop/gas.gltf", true, modelMatrix);
+
+	AxisXYZ axis;
+	axis.initialize();
+
+	Box box;
+	box.initialize(glm::vec3(0, 10, 10),        // translation
+						glm::vec3(5, 5, 5),
+						glm::radians(20.0f),
+						glm::vec3(0.0,0.0,1.0));
 
 	Skybox skybox;
 	std::vector<std::string> faces = {
@@ -730,14 +1053,19 @@ int main(void)
 		// Rendering
 		
 		projectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / windowHeight, zNear, zFar);
+		
+		
 		viewMatrix = camera.GetViewMatrix();
 		glm::mat4 vp = projectionMatrix * viewMatrix;
+		axis.render(vp);
+		box.render(vp);
+		
+		
+		viewMatrix = glm::mat4(glm::mat3(viewMatrix));
+		glm::mat4 vpSkybox = projectionMatrix * viewMatrix;
+		skybox.render(vpSkybox);
+		
 		bot.render(vp);
-
-		// viewMatrix = glm::mat4(glm::mat3(camera.GetViewMatrix()));
-		// vp = projectionMatrix * viewMatrix;
-		skybox.render(vp);
-
 
 		// FPS tracking 
 		// Count number of frames over a few seconds and take average
@@ -762,6 +1090,8 @@ int main(void)
 
 	// Clean up
 	bot.cleanup();
+	box.cleanup();
+	axis.cleanup();
 
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();

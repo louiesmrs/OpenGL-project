@@ -72,8 +72,8 @@ void Camera::updateCameraVectors()
 
 
 void Camera::resetCamera(glm::vec3 position) {
-    Yaw         = -90.0f;
-    Pitch       =  0.0f;
     Position = position;
+    Front = glm::vec3(0.0f, 0.0f, -1.0f);
+    Up = glm::vec3(0.0f, 1.0f, 0.0f);
     updateCameraVectors();
 }

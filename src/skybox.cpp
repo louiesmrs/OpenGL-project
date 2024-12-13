@@ -8,67 +8,50 @@
 
 GLfloat skyboxVertices[] = {
         // positions          
-        -1.0f,  1.0f, -1.0f,
-        -1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,
-         1.0f,  1.0f, -1.0f,
-        -1.0f,  1.0f, -1.0f,
+        // skybox vertices       
+	-1.0f,  1.0f, -1.0f,
+	-1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
 
-        -1.0f, -1.0f,  1.0f,
-        -1.0f, -1.0f, -1.0f,
-        -1.0f,  1.0f, -1.0f,
-        -1.0f,  1.0f, -1.0f,
-        -1.0f,  1.0f,  1.0f,
-        -1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
 
-         1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
 
-        -1.0f, -1.0f,  1.0f,
-        -1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
-         1.0f, -1.0f,  1.0f,
-        -1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
 
-        -1.0f,  1.0f, -1.0f,
-         1.0f,  1.0f, -1.0f,
-         1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,
-        -1.0f,  1.0f,  1.0f,
-        -1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	 1.0f,  1.0f, -1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f, -1.0f,
 
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f,  1.0f,
-         1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f,  1.0f,
-         1.0f, -1.0f,  1.0f
-    };
-    // GLuint index_buffer_data[36] = {		// 12 triangle faces of a box
-	// 	0, 1, 2, 	
-	// 	0, 2, 3, 
-		
-	// 	4, 5, 6, 
-	// 	4, 6, 7, 
-
-	// 	8, 9, 10, 
-	// 	8, 10, 11, 
-
-	// 	12, 13, 14, 
-	// 	12, 14, 15, 
-
-	// 	16, 17, 18, 
-	// 	16, 18, 19, 
-
-	// 	20, 21, 22, 
-	// 	20, 22, 23, 
-	// };
+	-1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f
+};
+    
 Skybox::Skybox()
 {
 }
@@ -78,7 +61,7 @@ void Skybox::initialize(std::vector<std::string> faces, const char *vertexShader
 
     glGenVertexArrays(1, &skyboxVertexArrayID);
     glBindVertexArray(skyboxVertexArrayID);
-
+    
     glGenBuffers(1, &skyboxVertexBufferID);
     glBindBuffer(GL_ARRAY_BUFFER, skyboxVertexBufferID);
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
@@ -92,13 +75,13 @@ void Skybox::initialize(std::vector<std::string> faces, const char *vertexShader
     // Get a handle for our "MVP" uniform
     mvpMatrixID = glGetUniformLocation(programID, "MVP");
    
-    textureSamplerID = glGetUniformLocation(programID, "skybox");
-    glGetError();
+    //textureSamplerID = glGetUniformLocation(programID, "skybox");
 }
 
 void Skybox::render(glm::mat4 mvp) {
+
     glUseProgram(programID);
-    glDepthMask(GL_FALSE);
+    glDepthFunc(GL_LEQUAL);
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, skyboxVertexBufferID);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
@@ -107,15 +90,11 @@ void Skybox::render(glm::mat4 mvp) {
     glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
 
     glActiveTexture(GL_TEXTURE0);
-    glGetError();
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapTexture);
-    glGetError();
-    glUniform1i(textureSamplerID,0);
-    glGetError();
+    //glUniform1i(cubeMapTexture,0);
     glDrawArrays(GL_TRIANGLES, 0, 36);
-    glGetError();
-    glDepthMask(GL_TRUE); // set depth function back to default
-    
+    glBindVertexArray(0);
+    glDepthFunc(GL_LESS); // set depth mask back to default
 }
 
 

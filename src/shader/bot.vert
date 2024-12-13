@@ -14,14 +14,18 @@ out vec2 uv;
 
 uniform mat4 MVP;
 uniform mat4 jointMat[65];
+uniform int useSkinning;
 
 void main() {
     // Transform vertex
-    mat4 skinMat =
+    mat4 skinMat = mat4(1.0);
+    if(useSkinning > 0) {
+        skinMat = 
         a_weight.x * jointMat[int(a_joint.x)] +
         a_weight.y * jointMat[int(a_joint.y)] +
         a_weight.z * jointMat[int(a_joint.z)] +
         a_weight.w * jointMat[int(a_joint.w)];
+    }
     gl_Position =  MVP * skinMat * vec4(vertexPosition, 1.0);
 
     // World-space geometry 
