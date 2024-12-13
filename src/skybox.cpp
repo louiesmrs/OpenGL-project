@@ -82,6 +82,7 @@ void Skybox::render(glm::mat4 mvp) {
 
     glUseProgram(programID);
     glDepthFunc(GL_LEQUAL);
+    glDisable(GL_CULL_FACE);
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, skyboxVertexBufferID);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
@@ -93,8 +94,8 @@ void Skybox::render(glm::mat4 mvp) {
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapTexture);
     //glUniform1i(cubeMapTexture,0);
     glDrawArrays(GL_TRIANGLES, 0, 36);
-    glBindVertexArray(0);
     glDepthFunc(GL_LESS); // set depth mask back to default
+    glEnable(GL_CULL_FACE);
 }
 
 

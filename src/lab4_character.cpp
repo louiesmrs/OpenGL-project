@@ -999,14 +999,16 @@ int main(void)
 	glClearColor(0.2f, 0.2f, 0.25f, 0.0f);
 
 	glEnable(GL_DEPTH_TEST);
-	//glEnable(GL_CULL_FACE);
+	glEnable(GL_CULL_FACE);
 
 	// Our 3D character
 	glm::mat4 modelMatrix = glm::mat4();
 	modelMatrix = glm::translate(modelMatrix, glm::vec3(20.0f,0.0f,10.0f));
 	modelMatrix = glm::scale(modelMatrix, glm::vec3(0.1f,0.1f,0.1f));
+	MyBot bot2("../src/model/bot/bot.gltf", true, modelMatrix);
 	modelMatrix = glm::rotate(modelMatrix, glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
 	MyBot bot("../src/model/flop/gas.gltf", true, modelMatrix);
+	
 
 	AxisXYZ axis;
 	axis.initialize();
@@ -1048,6 +1050,7 @@ int main(void)
 		if (playAnimation) {
 			time += deltaTime * playbackSpeed;
 			bot.update(time);
+			bot2.update(time);
 		}
 
 		// Rendering
@@ -1057,15 +1060,20 @@ int main(void)
 		
 		viewMatrix = camera.GetViewMatrix();
 		glm::mat4 vp = projectionMatrix * viewMatrix;
-		axis.render(vp);
-		box.render(vp);
 		
-		
-		viewMatrix = glm::mat4(glm::mat3(viewMatrix));
+		viewMatrix = glm::mat4(glm::mat3(camera.GetViewMatrix()));
 		glm::mat4 vpSkybox = projectionMatrix * viewMatrix;
 		skybox.render(vpSkybox);
-		
+		axis.render(vp);
+		box.render(vp);
 		bot.render(vp);
+		bot2.render(vp);
+		
+		
+		
+		
+		
+		
 
 		// FPS tracking 
 		// Count number of frames over a few seconds and take average
