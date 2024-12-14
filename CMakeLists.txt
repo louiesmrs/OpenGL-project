@@ -24,6 +24,9 @@ add_executable(project_scene
 	src/camera.cpp
 	src/skybox.cpp
 	src/render/shader.cpp
+	src/tiny_gltf.cpp
+	src/entity.cpp
+	src/terrain.cpp
 )
 target_link_libraries(project_scene
 	${OPENGL_LIBRARY}

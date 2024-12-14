@@ -1,7 +1,6 @@
 #include "skybox.h"
 #include <iostream>
 
-#define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
 #include <render/shader.h>
@@ -66,36 +65,30 @@ void Skybox::initialize(std::vector<std::string> faces, const char *vertexShader
     glBindBuffer(GL_ARRAY_BUFFER, skyboxVertexBufferID);
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
     
-    // glGenBuffers(1, &indexBufferID);
-    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
-    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index_buffer_data), index_buffer_data, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     cubeMapTexture = loadCubeMap(faces);
 
     programID = LoadShadersFromFile(vertexShaderPath, fragmentShaderPath);
     // Get a handle for our "MVP" uniform
     mvpMatrixID = glGetUniformLocation(programID, "MVP");
    
-    //textureSamplerID = glGetUniformLocation(programID, "skybox");
+    
 }
 
 void Skybox::render(glm::mat4 mvp) {
 
     glUseProgram(programID);
     glDepthFunc(GL_LEQUAL);
-    glDisable(GL_CULL_FACE);
-    glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, skyboxVertexBufferID);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+  
     glBindVertexArray(skyboxVertexArrayID);
-    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
     glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapTexture);
-    //glUniform1i(cubeMapTexture,0);
     glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
     glDepthFunc(GL_LESS); // set depth mask back to default
-    glEnable(GL_CULL_FACE);
 }
 
 
