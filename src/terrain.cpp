@@ -122,7 +122,7 @@ void Terrain::setup_instancing(std::vector<GLuint> &trees, std::vector<treeCoord
         model= glm::translate(model, glm::vec3(xPos,yPos,zPos));
         modelMatrices[i] = model;
     }
-    tree = Entity("../src/model/pine/pine_tree_01_1k.gltf", "../src/shader/tree.vert", "../src/shader/tree.frag",
+    tree = Entity("../src/model/fir.gltf", "../src/shader/tree.vert", "../src/shader/tree.frag",
         glm::mat4(1.0f), false, treeCoords.size(), modelMatrices);
     
     
