@@ -7,9 +7,9 @@
 
 
 #include <tiny_gltf.h>
+#include <stb/stb_image_write.h>
 
 #include <render/shader.h>
-
 #include <vector>
 #include <iostream>
 #include <iomanip>
@@ -21,6 +21,7 @@
 #include "skybox.h"
 #include "entity.h"
 #include "terrain.h"
+#include "constants.h"
 
 
 
@@ -48,6 +49,15 @@ static float FoV = 45.0f;
 static float zNear = 0.1f;
 static float zFar = 250.0f; 
 
+// Shadow mapping
+static glm::vec3 lightUp(0.0, 1.0, 0.0);
+static int shadowMapWidth;
+static int shadowMapHeight;
+
+// TODO: set these parameters 
+static float depthNear = 1.0f;
+static float depthFar = 2048.0f; 
+
 Camera camera(eye_center);
 float deltaTime = 0.0f;
 float lastX = (float)windowWidth / 2.0;
@@ -61,6 +71,29 @@ static glm::vec3 lightPosition(originX+50.0f, 500.0f, originY+100.0f);
 // Animation 
 static bool playAnimation = true;
 static float playbackSpeed = 2.0f;
+
+static bool saveDepth = false;
+
+static void saveDepthTexture(GLuint fbo, std::string filename) {
+    int width = shadowMapWidth;
+    int height = shadowMapHeight;
+	if (shadowMapWidth == 0 || shadowMapHeight == 0) {
+		width = windowWidth;
+		height = windowHeight;
+	}
+    int channels = 3; 
+    
+    std::vector<float> depth(width * height);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glReadBuffer(GL_DEPTH_COMPONENT);
+    glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, depth.data());
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    std::vector<unsigned char> img(width * height * 3);
+    for (int i = 0; i < width * height; ++i) img[3*i] = img[3*i+1] = img[3*i+2] = depth[i] * 255;
+
+    stbi_write_png(filename.c_str(), width, height, channels, img.data(), width * channels);
+}
 
  
 int main(void)
@@ -99,6 +132,34 @@ int main(void)
 		std::cerr << "Failed to initialize OpenGL context." << std::endl;
 		return -1;
 	}
+	// Prepare shadow map size for shadow mapping. Usually this is the size of the window itself, but on some platforms like Mac this can be 2x the size of the window. Use glfwGetFramebufferSize to get the shadow map size properly. 
+    glfwGetFramebufferSize(window, &shadowMapWidth, &shadowMapHeight);
+
+	GLuint depthMap;
+	GLuint depthMapFBO;
+	
+	glGenFramebuffers(1, &depthMapFBO);
+	// create depth texture
+	glGenTextures(1, &depthMap);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadowMapWidth, shadowMapHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+	// attach depth texture as FBO's depth buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glm::vec3 sunPos = glm::vec3(originX, 0, originY) - glm::vec3(-0.2f,-1.0f,-0.3f) * 20.0f;
+	std::cout << "sun pos " << glm::to_string(sunPos) << std::endl;
 
 	// Background
 	glClearColor(0.2f, 0.2f, 0.25f, 0.0f);
@@ -108,12 +169,13 @@ int main(void)
 
 	// Our 3D character
 	glm::mat4 modelMatrix = glm::mat4();
-	modelMatrix = glm::translate(modelMatrix, glm::vec3(originX,10.0f,originY));
-	modelMatrix = glm::scale(modelMatrix, glm::vec3(0.1f,0.1f,0.1f));
+	modelMatrix = glm::translate(modelMatrix, glm::vec3(originX+3.0f,5.0f,originY));
+	modelMatrix = glm::scale(modelMatrix, glm::vec3(0.05f,0.05f,0.05f));
 	
-	// Entity tree("../src/model/fir.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, false);
-	// modelMatrix = glm::rotate(modelMatrix, glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
-	// Entity bot2("../src/model/flop/gas.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
+	Entity bot2("../src/model/bot/bot.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
+	//Entity tree("../src/model/oak/oak.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, false);
+	modelMatrix = glm::rotate(modelMatrix, glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
+	Entity bot1("../src/model/flop/gas.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
 	Skybox skybox;
 	std::vector<std::string> faces = {
 		"../src/texture/day/right.bmp",
@@ -131,7 +193,25 @@ int main(void)
 	float time = 0.0f;			// Animation time 
 	float fTime = 0.0f;			// Time for measuring fps
 	unsigned long frames = 0;
-	glm::mat4 viewMatrix, projectionMatrix;
+	glm::mat4 viewMatrix, projectionMatrix, lightViewMatrix, vp;
+	projectionMatrix = glm::ortho(-500.0f, 500.0f, -500.0f, 500.0f, depthNear, depthFar);
+	lightViewMatrix = glm::lookAt(sunPos, glm::vec3(originX, 0, originY), lightUp);
+	lightViewMatrix = projectionMatrix * lightViewMatrix;
+	
+	Light light = {
+		glm::vec3(0.2,0.2,0.2),
+		glm::vec3(0.3,0.3,0.3),
+		glm::vec3(1.0,1.0,1.0),
+		glm::vec3(-0.2f,-1.0f,-0.3f),
+	};
+	
+	Shadow shadow = {
+		lightViewMatrix,
+		depthMap,
+	};
+	GLuint botDepthID = LoadShadersFromFile("../src/shader/depthBot.vert", "../src/shader/depth.frag");
+	GLuint terrainDepthID = LoadShadersFromFile("../src/shader/depth.vert", "../src/shader/depth.frag");
+	GLuint treeDepthID = LoadShadersFromFile("../src/shader/depthTree.vert", "../src/shader/depth.frag");
 	// Main loop
 	do
 	{
@@ -144,25 +224,42 @@ int main(void)
 
 		if (playAnimation) {
 			time += deltaTime * playbackSpeed;
-			//bot.update(time);
-			//bot2.update(time);
+			bot1.update(time);
+			bot2.update(time);
 		}
 
 		// Rendering
+		
+		
+		glViewport(0,0,shadowMapWidth,shadowMapHeight);
+		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+		bot1.render(botDepthID, lightViewMatrix);
+		bot2.render(botDepthID, lightViewMatrix);
+		//tree.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
+		glDisable(GL_CULL_FACE);
+		mountains.render(camera.Position, terrainDepthID, treeDepthID, lightViewMatrix);
+		glEnable(GL_CULL_FACE);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		//glViewport(0,0,windowWidth,windowHeight);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
 		
 		projectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / windowHeight, zNear, zFar);
 		
 		
 		viewMatrix = camera.GetViewMatrix();
-		glm::mat4 vp = projectionMatrix * viewMatrix;
+		vp = projectionMatrix * viewMatrix;
 		
 		viewMatrix = glm::mat4(glm::mat3(camera.GetViewMatrix()));
 		glm::mat4 vpSkybox = projectionMatrix * viewMatrix;
 		
-		// bot2.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
-		// tree.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
+		bot2.render(vp, camera.Position, shadow, light);
+		bot1.render(vp, camera.Position, shadow, light);
+		//tree.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
 		glDisable(GL_CULL_FACE);
-		mountains.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
+		mountains.render(vp, camera.Position, shadow, light);
 		glEnable(GL_CULL_FACE);
 	
 		
@@ -170,7 +267,12 @@ int main(void)
 		skybox.render(vpSkybox);
 		
 		
-		
+		if (saveDepth) {
+            std::string filename = "depth_camera.png";
+            saveDepthTexture(0, filename);
+            std::cout << "Depth texture saved to " << filename << std::endl;
+            saveDepth = false;
+        }
 		
 		
 
@@ -240,7 +342,8 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
         camera.ProcessKeyboard(UP, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
         camera.ProcessKeyboard(DOWN, deltaTime);
-
+	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
+        saveDepth = true;
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
 	std::cout << "pos: " << glm::to_string(camera.Position) << std::endl;

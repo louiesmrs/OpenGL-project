@@ -1,7 +1,7 @@
 #include "entity.h"
 
 
-#include <glm/gtc/type_ptr.hpp>
+
 #include <glm/gtx/string_cast.hpp>
 
 
@@ -392,59 +392,82 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 			primitiveObject.vao = vao;
             primitiveObject.vbos = vbos;
 			primitiveObjects.push_back(primitiveObject);
+			// int mat = mesh.primitives[i].material;
+			// if(mat >=0) {
+			// 	auto& material = model.materials[mat];
+
+			// }
+			if(instances != 1) {
+				std::cout << "instances: " << instances << std::endl;
+				std::cout << "matrix size: " << instanceMatrices.size() << std::endl;
+				std::cout << "vao: " << vao << std::endl;
+				glGenBuffers(1, &instanceMatricesID);
+				glBindBuffer(GL_ARRAY_BUFFER, instanceMatricesID);
+				glBufferData(GL_ARRAY_BUFFER, instances * sizeof(glm::mat4), glm::value_ptr(instanceMatrices[0]), GL_STATIC_DRAW);
+			
+				glEnableVertexAttribArray(3);
+				glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
+				glEnableVertexAttribArray(4);
+				glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
+				glEnableVertexAttribArray(5);
+				glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
+				glEnableVertexAttribArray(6);
+				glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
+				
+				glVertexAttribDivisor(3, 1);
+				glVertexAttribDivisor(4, 1);
+				glVertexAttribDivisor(5, 1);
+				glVertexAttribDivisor(6, 1);
+				
+			}
 			glBindVertexArray(0);
 		}
-        if(instances != 1) {
-                glEnableVertexAttribArray(3);
-                glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
-                glEnableVertexAttribArray(4);
-                glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
-                glEnableVertexAttribArray(5);
-                glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
-                glEnableVertexAttribArray(6);
-                glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
-
-                glVertexAttribDivisor(3, 1);
-                glVertexAttribDivisor(4, 1);
-                glVertexAttribDivisor(5, 1);
-                glVertexAttribDivisor(6, 1);
-        }
+        
 		for (const auto& material : model.materials) {
-			for (const auto& value : material.values) {
-				if (value.first == "baseColorTexture") {
-					const tinygltf::Texture& tex = model.textures[value.second.TextureIndex()];
-					if (tex.source > -1) {
-						GLuint texid;
-						glGenTextures(1, &texid);
+            for (const auto& value : material.values) {
+                if (value.first == "baseColorTexture") {
+                    const tinygltf::Texture& tex = model.textures[value.second.TextureIndex()];
+                    if (tex.source > -1) {
+                        GLuint texid;
+                        glGenTextures(1, &texid);
 
-						const tinygltf::Image& image = model.images[tex.source];
+                        const tinygltf::Image& image = model.images[tex.source];
 
-						glBindTexture(GL_TEXTURE_2D, texid);
-						glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-						glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-						glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+                        glBindTexture(GL_TEXTURE_2D, texid);
+                        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+                        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+                        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-						GLenum format = GL_RGBA;
-						if (image.component == 1) {
-							format = GL_RED;
-						} else if (image.component == 2) {
-							format = GL_RG;
-						} else if (image.component == 3) {
-							format = GL_RGB;
-						}
+                        GLenum format = GL_RGBA;
+                        if (image.component == 1) {
+                            format = GL_RED;
+                        } else if (image.component == 2) {
+                            format = GL_RG;
+                        } else if (image.component == 3) {
+                            format = GL_RGB;
+                        }
 
-						GLenum type = GL_UNSIGNED_BYTE;
-						if (image.bits == 16) {
-							type = GL_UNSIGNED_SHORT;
-						}
+                        GLenum type = GL_UNSIGNED_BYTE;
+                        if (image.bits == 16) {
+                            type = GL_UNSIGNED_SHORT;
+                        }
 
-						glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0,
-									format, type, &image.image.at(0));
-					}
-				}
-			}
+                        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0,
+                                    format, type, &image.image.at(0));
+                        isTexture = true;
+						textureID = texid;
+						
+                    }
+                } else if (value.first == "baseColorFactor") {
+					const std::array<double, 4>& colorFactor = value.second.ColorFactor();
+                    glm::vec4 baseColorFactor(colorFactor[0], colorFactor[1], colorFactor[2], colorFactor[3]);
+                    // Use baseColorFactor as needed, for example, pass it to the shader
+                    std::cout << "BCF: " << glm::to_string(baseColorFactor) << std::endl;
+                    glUniform4fv(baseColorFactorID, 1, glm::value_ptr(baseColorFactor));
+                }
+            }
 		}
 	}
 
@@ -452,7 +475,9 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 						tinygltf::Model &model,
 						tinygltf::Node &node) {
 		// Bind buffers for the current mesh at the node
+		
 		if ((node.mesh >= 0) && (node.mesh < model.meshes.size())) {
+			
 			bindMesh(primitiveObjects, model, model.meshes[node.mesh]);
 		}
 
@@ -478,6 +503,7 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 	void Entity::drawMesh(const std::vector<PrimitiveObject> &primitiveObjects,
 				tinygltf::Model &model, tinygltf::Mesh &mesh) {
 		
+
 		for (size_t i = 0; i < mesh.primitives.size(); ++i) 
 		{
 			GLuint vao = primitiveObjects[i].vao;
@@ -490,9 +516,12 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.at(indexAccessor.bufferView));
             if(instances != 1) {
+                // std::cout << "instances: " << instances << std::endl;
+                // std::cout << "vao: " << vao << std::endl;
                 glDrawElementsInstanced(primitive.mode, indexAccessor.count,
                             indexAccessor.componentType,
                             BUFFER_OFFSET(indexAccessor.byteOffset), instances);
+                glGetError();
             
             } else{
                 glDrawElements(primitive.mode, indexAccessor.count,
@@ -523,14 +552,14 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 		}
 	}
 
-	void Entity::render(glm::mat4 cameraMatrix, glm::vec3 cameraPosition, glm::vec3 ambient, glm::vec3 diffuse,  glm::vec3 specular, glm::vec3 direction) {
-		glUseProgram(programID);
+	void Entity::render(glm::mat4 cameraMatrix, glm::vec3 cameraPosition, Shadow shadow, Light light) {
+		
 		
 		// Set camera
-        
+		glUseProgram(programID);
 		glm::mat4 mvp = cameraMatrix;
 		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
-        glUniformMatrix4fv(modelID, 1, GL_FALSE, &transform[0][0]);
+		glUniformMatrix4fv(modelID, 1, GL_FALSE, &transform[0][0]);
 
 		// -----------------------------------------------------------------
 		// Set animation data for linear blend skinning in shader
@@ -541,17 +570,37 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 			glUniformMatrix4fv(jointMatricesID, skinObjects[0].jointMatrices.size(), GL_FALSE, glm::value_ptr(skinObjects[0].jointMatrices[0]));
 		}
 		glUniform1i(isSkinningID, isSkinning);
+		glUniform1i(isTextureID, isTexture);
 		// -----------------------------------------------------------------
 
 		// Set light data 
-		glUniform3fv(ambientID, 1, &ambient[0]);
-        glUniform3fv(diffuseID, 1, &diffuse[0]);
-        glUniform3fv(specularID, 1, &specular[0]);
-        glUniform3fv(directionID, 1, &direction[0]);
-        glUniform3fv(viewPosID, 1, &cameraPosition[0]);
-		 
-
+		glUniform3fv(ambientID, 1, &light.ambient[0]);
+		glUniform3fv(diffuseID, 1, &light.diffuse[0]);
+		glUniform3fv(specularID, 1, &light.specular[0]);
+		glUniform3fv(directionID, 1, &light.direction[0]);
+		glUniform3fv(viewPosID, 1, &cameraPosition[0]);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D,textureID);
+		glUniform1i(textureSamplerID,0);
+		glActiveTexture(GL_TEXTURE0+1);
+		glBindTexture(GL_TEXTURE_2D,shadow.shadowMap);
+		glUniform1i(depthSamplerID,1);
+		glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &shadow.lightSpaceView[0][0]);
 		// Draw the GLTF model
+		drawModel(primitiveObjects, model);
+	}
+
+	void Entity::render(GLuint depthID, glm::mat4 vp) {
+		
+		glUseProgram(depthID);
+		glUniformMatrix4fv(glGetUniformLocation(depthID, "lightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(vp));
+
+		glUniformMatrix4fv(glGetUniformLocation(depthID, "u_model"), 1, GL_FALSE, &transform[0][0]);
+
+		if(isSkinning) {
+			glUniformMatrix4fv(glGetUniformLocation(depthID, "jointMat"), skinObjects[0].jointMatrices.size(), GL_FALSE, glm::value_ptr(skinObjects[0].jointMatrices[0]));
+		}
+		glUniform1i(glGetUniformLocation(depthID, "isSkinning"), isSkinning);
 		drawModel(primitiveObjects, model);
 	}
 

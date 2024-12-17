@@ -12,16 +12,18 @@ layout(location = 4) in vec4 a_weight;
 out vec2 uv;
 out vec3 fragPos;
 out vec3 normal;
+out vec4 lightSpaceView;
 
 uniform mat4 u_model;
 uniform mat4 MVP;
 uniform mat4 jointMat[65];
-uniform int isSkinning;
+uniform bool isSkinning;
+uniform mat4 lightSpaceMatrix;
 
 void main() {
     // Transform vertex
     mat4 skinMat = mat4(1.0);
-    if(isSkinning > 0) {
+    if(isSkinning) {
         skinMat = 
         a_weight.x * jointMat[int(a_joint.x)] +
         a_weight.y * jointMat[int(a_joint.y)] +
@@ -34,4 +36,5 @@ void main() {
     fragPos = vec3(u_model * vec4(vertexPosition, 1.0));
     normal = normalize(mat3(transpose(skinMat)) * vertexNormal);
     uv = vertexUV;
+    lightSpaceView = lightSpaceMatrix * vec4(vertexPosition, 1);
 }

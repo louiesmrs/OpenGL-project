@@ -1,5 +1,5 @@
 #include "terrain.h"
-
+#include <glm/gtx/string_cast.hpp>
 double fade(double t) { return t * t * t * (t * (t * 6 - 15) + 10); };
     
 double lerp(double t, double a, double b) { return a + t * (b - a); }
@@ -62,7 +62,7 @@ std::vector<int> get_permutation_vector () {
     return p;
 }
 
-void Terrain::render(glm::mat4 &mvp, glm::vec3 cameraPosition, glm::vec3 ambient, glm::vec3 diffuse,  glm::vec3 specular, glm::vec3 direction) {
+void Terrain::render(glm::mat4 &mvp, glm::vec3 cameraPosition, Shadow shadow, Light light) {
     // Per-frame time logic
     
     // Measures number of map chunks away from origin map chunk the camera is
@@ -72,39 +72,65 @@ void Terrain::render(glm::mat4 &mvp, glm::vec3 cameraPosition, glm::vec3 ambient
     
     glUseProgram(programID);
     glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
-    glUniform3fv(ambientID, 1, &ambient[0]);
-	glUniform3fv(diffuseID, 1, &diffuse[0]);
-    glUniform3fv(specularID, 1, &specular[0]);
-	glUniform3fv(directionID, 1, &direction[0]);
+    glUniform3fv(ambientID, 1, &light.ambient[0]);
+    glUniform3fv(diffuseID, 1, &light.diffuse[0]);
+    glUniform3fv(specularID, 1, &light.specular[0]);
+    glUniform3fv(directionID, 1, &light.direction[0]);
     glUniform3fv(viewPosID, 1, &cameraPosition[0]);
-
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, shadow.shadowMap);
+    glUniform1i(depthSamplerID,0);
+    glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &shadow.lightSpaceView[0][0]);
     // Render map chunks
+    std::vector<glm::mat4> modelMatrices;
     for (int y = 0; y < yMapChunks; y++) 
         for (int x = 0; x < xMapChunks; x++) {
             // Only render chunk if it's within render distance
             if (std::abs(gridPosX - x) <= chunk_render_distance && (y - gridPosY) <= chunk_render_distance) {
                 glm::mat4 model = glm::mat4(1.0f);
                 model = glm::translate(model, glm::vec3(-chunkWidth / 2.0 + (chunkWidth - 1) * x, 0.0, -chunkHeight / 2.0 + (chunkHeight - 1) * y));
-                
+                modelMatrices.push_back(model);
+                //std::cout << "translate " << glm::to_string(glm::vec3(-chunkWidth / 2.0 + (chunkWidth - 1) * x, 0.0, -chunkHeight / 2.0 + (chunkHeight - 1) * y)) << std::endl;
                 glUniformMatrix4fv(modelID, 1, GL_FALSE, &model[0][0]);
                 
                 // Terrain chunk
                 glBindVertexArray(map_chunks[x + y*xMapChunks]);
                 glDrawElements(GL_TRIANGLES, nIndices, GL_UNSIGNED_INT, 0);
-                
-                // Plant chunks
-                // model = glm::mat4(1.0f);
-                // model = glm::translate(model, glm::vec3(-chunkWidth / 2.0 + (chunkWidth - 1) * x, 0.0, -chunkHeight / 2.0 + (chunkHeight - 1) * y));
-                // model = glm::scale(model, glm::vec3(MODEL_SCALE));
-                // glUniformMatrix4fv(modelID, 1, GL_FALSE, &model[0][0]);
-
-                
             }
         }
     
-    glEnable(GL_CULL_FACE);
-    tree.render(mvp, cameraPosition, ambient, diffuse,  specular, direction);
-    glDisable(GL_CULL_FACE);
+    // glEnable(GL_CULL_FACE);
+    // tree.render(mvp, cameraPosition, shadow, light);
+    // glDisable(GL_CULL_FACE);
+}
+
+void Terrain::render(glm::vec3 cameraPosition, GLuint terrainDepthID, GLuint treeDepthID, glm::mat4 vp) {
+    // Per-frame time logic
+    // Measures number of map chunks away from origin map chunk the camera is
+    gridPosX = (int)(cameraPosition.x - originX) / chunkWidth + xMapChunks / 2;
+    gridPosY = (int)(cameraPosition.z - originY) / chunkHeight + yMapChunks / 2;
+    glUniformMatrix4fv(glGetUniformLocation(terrainDepthID, "lightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(vp));
+    // Render map chunks
+    std::vector<glm::mat4> modelMatrices;
+    for (int y = 0; y < yMapChunks; y++) 
+        for (int x = 0; x < xMapChunks; x++) {
+            // Only render chunk if it's within render distance
+            if (std::abs(gridPosX - x) <= chunk_render_distance && (y - gridPosY) <= chunk_render_distance) {
+                glm::mat4 model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(-chunkWidth / 2.0 + (chunkWidth - 1) * x, 0.0, -chunkHeight / 2.0 + (chunkHeight - 1) * y));
+                modelMatrices.push_back(model);
+                //std::cout << "translate " << glm::to_string(glm::vec3(-chunkWidth / 2.0 + (chunkWidth - 1) * x, 0.0, -chunkHeight / 2.0 + (chunkHeight - 1) * y)) << std::endl;
+                glUniformMatrix4fv(glGetUniformLocation(terrainDepthID, "u_model"), 1, GL_FALSE, &model[0][0]);
+                
+                // Terrain chunk
+                glBindVertexArray(map_chunks[x + y*xMapChunks]);
+                glDrawElements(GL_TRIANGLES, nIndices, GL_UNSIGNED_INT, 0);
+            }
+        }
+    
+    // glEnable(GL_CULL_FACE);
+    // tree.render(treeDepthID, vp);
+    // glDisable(GL_CULL_FACE);
 
 }
 
@@ -114,18 +140,23 @@ void Terrain::setup_instancing(std::vector<GLuint> &trees, std::vector<treeCoord
     modelMatrices.reserve(treeCoords.size());
     std::cout << treeCoords.size() << std::endl;
     // Instancing prep
+    glm::mat4 m = glm::mat4(1.0f);
+    m = glm::translate(m, glm::vec3(originX, 3.0f, originY));
     for (int i = 0; i < treeCoords.size(); i++) {
         glm::mat4 model = glm::mat4(1.0f);
-        float xPos = treeCoords[i].xpos / MODEL_SCALE + treeCoords[i].xOffset;
-        float yPos = treeCoords[i].ypos / MODEL_SCALE;
-        float zPos = treeCoords[i].zpos / MODEL_SCALE + treeCoords[i].yOffset;
-        model= glm::translate(model, glm::vec3(xPos,yPos,zPos));
-        modelMatrices[i] = model;
+        float xPos = treeCoords[i].xpos + treeCoords[i].xOffset + (-chunkWidth / 2.0 + (chunkWidth - 1) * i%100);
+        float yPos = treeCoords[i].ypos;
+        float zPos = treeCoords[i].zpos + treeCoords[i].yOffset + (-chunkWidth / 2.0 + (chunkWidth - 1) * i%100);
+        model = glm::translate(model, glm::vec3(xPos, yPos, zPos));
+        glm::vec3 coord = glm::vec3(xPos, yPos, zPos);
+        //std::cout << glm::to_string(coord) << std::endl;
+        modelMatrices.push_back(model);
     }
-    tree = Entity("../src/model/fir.gltf", "../src/shader/tree.vert", "../src/shader/tree.frag",
-        glm::mat4(1.0f), false, treeCoords.size(), modelMatrices);
-    
-    
+    m = glm::scale(m, glm::vec3(0.3f,0.3f,0.3f));
+    m = glm::rotate(m, glm::radians(45.0f), glm::vec3(0.0f,1.0f,0.0f));
+    std::cout << "matrix_Size: " << modelMatrices.size() << std::endl;
+    // tree = Entity("../src/model/oak/oak.gltf", "../src/shader/tree.vert", "../src/shader/tree.frag",
+    //     m, false, treeCoords.size(), modelMatrices);
 }
 
 void Terrain::generate_map_chunk(GLuint &VAO, int xOffset, int yOffset, std::vector<treeCoord> &treeCoords) {
@@ -261,7 +292,7 @@ std::vector<float>  Terrain::generate_biome(const std::vector<float> &vertices, 
             // NOTE: The max height of a vertex is "meshHeight"
             if (vertices[i] <= biomeColors[j].height * meshHeight) {
                 color = biomeColors[j].color;
-                if (j == 3) {
+                if (j == 1) {
                     if (rand() % 1000 < 5) {
                         treeCoords.push_back(treeCoord{vertices[i-1], vertices[i], vertices[i+1], xOffset, yOffset});
                     }

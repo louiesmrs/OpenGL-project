@@ -14,6 +14,7 @@
 #include <vector>
 #include <cstdlib>
 #include "entity.h"
+#include "constants.h"
 #include <render/shader.h>
 
 
@@ -46,6 +47,8 @@ public:
     GLuint specularID;
     GLuint directionID;
     GLuint viewPosID;
+    GLuint depthSamplerID;
+    GLuint lightSpaceMatrixID;
 
     float WATER_HEIGHT = 0.1;
     int chunk_render_distance = 3;
@@ -93,6 +96,8 @@ public:
         specularID = glGetUniformLocation(programID, "specular");
 		directionID = glGetUniformLocation(programID, "direction");
 		viewPosID = glGetUniformLocation(programID, "u_viewPos");
+        depthSamplerID = glGetUniformLocation(programID, "shadowMap");
+        lightSpaceMatrixID = glGetUniformLocation(programID, "lightSpaceMatrix");
         trees.reserve(xMapChunks * yMapChunks);
         setup_instancing(trees, treeCoords);
         
@@ -103,8 +108,8 @@ public:
     std::vector<float> generate_normals(const std::vector<int> &indices, const std::vector<float> &vertices);
     std::vector<float> generate_biome(const std::vector<float> &vertices, std::vector<treeCoord> &treeCoords, int xOffset, int yOffset);
     void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset, std::vector<treeCoord> &treeCoords);
-    void render(glm::mat4 &mvp, glm::vec3 cameraPosition, glm::vec3 ambient, glm::vec3 diffuse,  glm::vec3 specular, glm::vec3 direction);
-
+    void render(glm::mat4 &mvp, glm::vec3 cameraPosition, Shadow shadow, Light light);
+    void render(glm::vec3 cameraPosition, GLuint terrainDepthID, GLuint treeDepthID, glm::mat4 vp);
     void setup_instancing(std::vector<GLuint> &plant_chunk, std::vector<treeCoord> &treeCoords);
 
 };

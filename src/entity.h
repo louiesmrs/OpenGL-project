@@ -10,7 +10,10 @@
 #include <iostream>
 #include <vector>
 #include <tiny_gltf.h>
+#include <glm/gtc/type_ptr.hpp>
 #include <render/shader.h>
+#include "constants.h"
+
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
@@ -64,11 +67,19 @@ public:
 	GLuint isSkinningID;
     GLuint instanceMatricesID;
     GLuint modelID;
+    GLuint isTextureID;
+    GLuint baseColorFactorID;
+    GLuint textureID;
+    GLuint textureSamplerID;
+	GLuint depthSamplerID;
+    GLuint lightSpaceMatrixID;
 
 	tinygltf::Model model;
 
 	glm::mat4 transform;
 	bool isSkinning;
+    bool isTexture = false;
+    bool isInstancing;
     int instances;
     std::vector<glm::mat4> instanceMatrices;
 
@@ -94,12 +105,6 @@ public:
 			return;
 		}
 
-		// Prepare buffers for rendering
-        if(instances != 1) {
-            glGenBuffers(1, &instanceMatricesID);
-            glBindBuffer(GL_ARRAY_BUFFER, instanceMatricesID);
-            glBufferData(GL_ARRAY_BUFFER, instances * sizeof(glm::mat4), &instanceMatrices[0], GL_STATIC_DRAW);
-        }
 		primitiveObjects = bindModel(model);
 
 		// Prepare joint matrices
@@ -123,14 +128,18 @@ public:
 		directionID = glGetUniformLocation(programID, "direction");
 		viewPosID = glGetUniformLocation(programID, "u_viewPos");
         modelID = glGetUniformLocation(programID, "u_model");
+        isTextureID = glGetUniformLocation(programID, "isTexture");
+        baseColorFactorID = glGetUniformLocation(programID, "baseColorFactor");
 
 		// Get a handle for joint matrices
 		jointMatricesID = glGetUniformLocation(programID, "jointMat");
 		isSkinningID = glGetUniformLocation(programID, "isSkinning");
-		
+        depthSamplerID = glGetUniformLocation(programID, "shadowMap");
+		lightSpaceMatrixID = glGetUniformLocation(programID, "lightSpaceMatrix");
 	}
     void update(float time);
-    void render(glm::mat4 cameraMatrix, glm::vec3 cameraPosition, glm::vec3 ambient, glm::vec3 diffuse,  glm::vec3 specular, glm::vec3 direction);
+    void render(glm::mat4 cameraMatrix, glm::vec3 cameraPosition, Shadow shadow, Light light);
+    void render(GLuint depthID, glm::mat4 vp); 
     void cleanup();
 	std::vector<SkinObject> prepareSkinning(const tinygltf::Model &model);
 	std::vector<AnimationObject> prepareAnimation(const tinygltf::Model &model);
