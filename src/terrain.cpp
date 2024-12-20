@@ -99,14 +99,15 @@ void Terrain::render(glm::mat4 &mvp, glm::vec3 cameraPosition, Shadow shadow, Li
             }
         }
     
-    // glEnable(GL_CULL_FACE);
-    // tree.render(mvp, cameraPosition, shadow, light);
-    // glDisable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
+    tree.render(mvp, cameraPosition, shadow, light);
+    glDisable(GL_CULL_FACE);
 }
 
 void Terrain::render(glm::vec3 cameraPosition, GLuint terrainDepthID, GLuint treeDepthID, glm::mat4 vp) {
     // Per-frame time logic
     // Measures number of map chunks away from origin map chunk the camera is
+    glUseProgram(terrainDepthID);
     gridPosX = (int)(cameraPosition.x - originX) / chunkWidth + xMapChunks / 2;
     gridPosY = (int)(cameraPosition.z - originY) / chunkHeight + yMapChunks / 2;
     glUniformMatrix4fv(glGetUniformLocation(terrainDepthID, "lightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(vp));
@@ -128,9 +129,9 @@ void Terrain::render(glm::vec3 cameraPosition, GLuint terrainDepthID, GLuint tre
             }
         }
     
-    // glEnable(GL_CULL_FACE);
-    // tree.render(treeDepthID, vp);
-    // glDisable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
+    tree.render(treeDepthID, vp);
+    glDisable(GL_CULL_FACE);
 
 }
 
@@ -144,19 +145,38 @@ void Terrain::setup_instancing(std::vector<GLuint> &trees, std::vector<treeCoord
     m = glm::translate(m, glm::vec3(originX, 3.0f, originY));
     for (int i = 0; i < treeCoords.size(); i++) {
         glm::mat4 model = glm::mat4(1.0f);
-        float xPos = treeCoords[i].xpos + treeCoords[i].xOffset + (-chunkWidth / 2.0 + (chunkWidth - 1) * i%100);
+        float xPos = treeCoords[i].xpos + treeCoords[i].xOffset * chunkWidth * (i%10+1);
         float yPos = treeCoords[i].ypos;
-        float zPos = treeCoords[i].zpos + treeCoords[i].yOffset + (-chunkWidth / 2.0 + (chunkWidth - 1) * i%100);
+        float zPos = treeCoords[i].zpos + treeCoords[i].yOffset * chunkHeight * (i%10+1);
         model = glm::translate(model, glm::vec3(xPos, yPos, zPos));
         glm::vec3 coord = glm::vec3(xPos, yPos, zPos);
-        //std::cout << glm::to_string(coord) << std::endl;
+        //std::cout << i << " " << glm::to_string(coord) << std::endl;
         modelMatrices.push_back(model);
     }
-    m = glm::scale(m, glm::vec3(0.3f,0.3f,0.3f));
-    m = glm::rotate(m, glm::radians(45.0f), glm::vec3(0.0f,1.0f,0.0f));
+    m = glm::scale(m, glm::vec3(0.1f,0.1f,0.1f));
+    // Duplicate trees in all four quadrants
+    int originalSize = modelMatrices.size();
+    for (int i = 0; i < originalSize; i++) {
+        glm::mat4 model = modelMatrices[i];
+        glm::vec3 pos = glm::vec3(model[3]);
+
+        // First quadrant (already added)
+        // Second quadrant
+        glm::mat4 model2 = glm::translate(glm::mat4(1.0f), glm::vec3(-pos.x, pos.y, pos.z));
+        modelMatrices.push_back(model2);
+
+        // Third quadrant
+        glm::mat4 model3 = glm::translate(glm::mat4(1.0f), glm::vec3(-pos.x, pos.y, -pos.z));
+        modelMatrices.push_back(model3);
+
+        // Fourth quadrant
+        glm::mat4 model4 = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x, pos.y, -pos.z));
+        modelMatrices.push_back(model4);
+    }
+    m = glm::rotate(m, glm::radians(135.0f), glm::vec3(0.0f,1.0f,0.0f));
     std::cout << "matrix_Size: " << modelMatrices.size() << std::endl;
-    // tree = Entity("../src/model/oak/oak.gltf", "../src/shader/tree.vert", "../src/shader/tree.frag",
-    //     m, false, treeCoords.size(), modelMatrices);
+    tree = Entity("../src/model/low/oak.gltf", "../src/shader/tree.vert", "../src/shader/tree.frag",
+        m, false, modelMatrices.size(), modelMatrices);
 }
 
 void Terrain::generate_map_chunk(GLuint &VAO, int xOffset, int yOffset, std::vector<treeCoord> &treeCoords) {
@@ -292,8 +312,8 @@ std::vector<float>  Terrain::generate_biome(const std::vector<float> &vertices, 
             // NOTE: The max height of a vertex is "meshHeight"
             if (vertices[i] <= biomeColors[j].height * meshHeight) {
                 color = biomeColors[j].color;
-                if (j == 1) {
-                    if (rand() % 1000 < 5) {
+                if (j == 2 || j == 1) {
+                    if (rand() % 10000 < 5) {
                         treeCoords.push_back(treeCoord{vertices[i-1], vertices[i], vertices[i+1], xOffset, yOffset});
                     }
                 }

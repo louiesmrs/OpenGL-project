@@ -392,41 +392,11 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 			primitiveObject.vao = vao;
             primitiveObject.vbos = vbos;
 			primitiveObjects.push_back(primitiveObject);
-			// int mat = mesh.primitives[i].material;
-			// if(mat >=0) {
-			// 	auto& material = model.materials[mat];
-
-			// }
-			if(instances != 1) {
-				std::cout << "instances: " << instances << std::endl;
-				std::cout << "matrix size: " << instanceMatrices.size() << std::endl;
-				std::cout << "vao: " << vao << std::endl;
-				glGenBuffers(1, &instanceMatricesID);
-				glBindBuffer(GL_ARRAY_BUFFER, instanceMatricesID);
-				glBufferData(GL_ARRAY_BUFFER, instances * sizeof(glm::mat4), glm::value_ptr(instanceMatrices[0]), GL_STATIC_DRAW);
-			
-				glEnableVertexAttribArray(3);
-				glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
-				glEnableVertexAttribArray(4);
-				glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
-				glEnableVertexAttribArray(5);
-				glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
-				glEnableVertexAttribArray(6);
-				glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
-				
-				glVertexAttribDivisor(3, 1);
-				glVertexAttribDivisor(4, 1);
-				glVertexAttribDivisor(5, 1);
-				glVertexAttribDivisor(6, 1);
-				
-			}
-			glBindVertexArray(0);
-		}
-        
-		for (const auto& material : model.materials) {
-            for (const auto& value : material.values) {
-                if (value.first == "baseColorTexture") {
-                    const tinygltf::Texture& tex = model.textures[value.second.TextureIndex()];
+			int mat = mesh.primitives[i].material;
+			if(mat >=0) {
+				auto& material = model.materials[mat];
+				int texidx = material.pbrMetallicRoughness.baseColorTexture.index;
+				const tinygltf::Texture& tex = model.textures[texidx];
                     if (tex.source > -1) {
                         GLuint texid;
                         glGenTextures(1, &texid);
@@ -458,17 +428,44 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
                                     format, type, &image.image.at(0));
                         isTexture = true;
 						textureID = texid;
-						
-                    }
-                } else if (value.first == "baseColorFactor") {
-					const std::array<double, 4>& colorFactor = value.second.ColorFactor();
-                    glm::vec4 baseColorFactor(colorFactor[0], colorFactor[1], colorFactor[2], colorFactor[3]);
-                    // Use baseColorFactor as needed, for example, pass it to the shader
-                    std::cout << "BCF: " << glm::to_string(baseColorFactor) << std::endl;
-                    glUniform4fv(baseColorFactorID, 1, glm::value_ptr(baseColorFactor));
-                }
-            }
+				}
+
+				glm::vec4 baseColorFactor(1.0f); // Default base color factor
+				if(material.pbrMetallicRoughness.baseColorFactor.size() == 4) {
+					std::vector<double> colorFactor = material.pbrMetallicRoughness.baseColorFactor;
+					baseColorFactor = glm::vec4(colorFactor[0], colorFactor[1], colorFactor[2], colorFactor[3]);
+					// Use baseColorFactor as needed, for example, pass it to the shader
+					std::cout << "BCF: " << glm::to_string(baseColorFactor) << std::endl;
+					
+				}
+				glUniform4fv(baseColorFactorID, 1, glm::value_ptr(baseColorFactor));
+			}
+			if(instances != 1) {
+				std::cout << "instances: " << instances << std::endl;
+				std::cout << "matrix size: " << instanceMatrices.size() << std::endl;
+				std::cout << "vao: " << vao << std::endl;
+				glGenBuffers(1, &instanceMatricesID);
+				glBindBuffer(GL_ARRAY_BUFFER, instanceMatricesID);
+				glBufferData(GL_ARRAY_BUFFER, instances * sizeof(glm::mat4), glm::value_ptr(instanceMatrices[0]), GL_STATIC_DRAW);
+			
+				glEnableVertexAttribArray(3);
+				glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
+				glEnableVertexAttribArray(4);
+				glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
+				glEnableVertexAttribArray(5);
+				glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
+				glEnableVertexAttribArray(6);
+				glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
+				
+				glVertexAttribDivisor(3, 1);
+				glVertexAttribDivisor(4, 1);
+				glVertexAttribDivisor(5, 1);
+				glVertexAttribDivisor(6, 1);
+				
+			}
+			glBindVertexArray(0);
 		}
+        
 	}
 
 	void Entity::bindModelNodes(std::vector<PrimitiveObject> &primitiveObjects, 
@@ -495,6 +492,18 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 		for (size_t i = 0; i < scene.nodes.size(); ++i) {
 			assert((scene.nodes[i] >= 0) && (scene.nodes[i] < model.nodes.size()));
 			bindModelNodes(primitiveObjects, model, model.nodes[scene.nodes[i]]);
+		}
+		for(auto pr : primitiveObjects) {
+			for (auto it = pr.vbos.cbegin(); it != pr.vbos.cend();) {
+				tinygltf::BufferView bufferView = model.bufferViews[it->first];
+				if (bufferView.target != GL_ELEMENT_ARRAY_BUFFER) {
+				glDeleteBuffers(1, &pr.vbos[it->first]);
+				pr.vbos.erase(it++);
+				}
+				else {
+				++it;
+				}
+			}
 		}
 
 		return primitiveObjects;

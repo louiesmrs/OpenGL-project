@@ -17,8 +17,8 @@ uniform mat4 lightSpaceMatrix;
 
 void main() {
     fragPos = vec3(u_model * vec4(aPos + aOffset, 1.0));
-    normal = aNormal;
+    normal = transpose(inverse(mat3(u_model))) * aNormal;
     color = aColor;
-    lightSpaceView = lightSpaceMatrix * vec4(aPos, 1);
+    lightSpaceView = lightSpaceMatrix * vec4(fragPos, 1);
     gl_Position = MVP * u_model * vec4(aPos+aOffset , 1.0);
 }

@@ -135,6 +135,7 @@ public:
 		jointMatricesID = glGetUniformLocation(programID, "jointMat");
 		isSkinningID = glGetUniformLocation(programID, "isSkinning");
         depthSamplerID = glGetUniformLocation(programID, "shadowMap");
+		textureSamplerID = glGetUniformLocation(programID, "tex");
 		lightSpaceMatrixID = glGetUniformLocation(programID, "lightSpaceMatrix");
 	}
     void update(float time);

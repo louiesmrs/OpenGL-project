@@ -40,14 +40,14 @@ int chunkWidth = 127;
 int chunkHeight = 127;
 float originX = (chunkWidth  * xMapChunks) / 2 - chunkWidth / 2;
 float originY = (chunkHeight * yMapChunks) / 2 - chunkHeight / 2;
-
+int chunk_render_distance = 3;
 // Camera
-static glm::vec3 eye_center(originX, 20.0f, originY);
+static glm::vec3 eye_center(originX-30.0f, 20.0f, originY-30.0f);
 static glm::vec3 lookat(0.0f, 0.0f, 0.0f);
 static glm::vec3 up(0.0f, 1.0f, 0.0f);
 static float FoV = 45.0f;
 static float zNear = 0.1f;
-static float zFar = 250.0f; 
+static float zFar = (float)chunkWidth * (chunk_render_distance); 
 
 // Shadow mapping
 static glm::vec3 lightUp(0.0, 1.0, 0.0);
@@ -55,8 +55,8 @@ static int shadowMapWidth;
 static int shadowMapHeight;
 
 // TODO: set these parameters 
-static float depthNear = 1.0f;
-static float depthFar = 2048.0f; 
+static float depthNear = 0.1f;
+static float depthFar = 2000.0f; 
 
 Camera camera(eye_center);
 float deltaTime = 0.0f;
@@ -134,7 +134,9 @@ int main(void)
 	}
 	// Prepare shadow map size for shadow mapping. Usually this is the size of the window itself, but on some platforms like Mac this can be 2x the size of the window. Use glfwGetFramebufferSize to get the shadow map size properly. 
     glfwGetFramebufferSize(window, &shadowMapWidth, &shadowMapHeight);
-
+	std::cout << "shadow width " << shadowMapWidth << std::endl;
+	std::cout << "shadow height " << shadowMapHeight << std::endl;
+	
 	GLuint depthMap;
 	GLuint depthMapFBO;
 	
@@ -158,21 +160,19 @@ int main(void)
 			std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	glm::vec3 sunPos = glm::vec3(originX, 0, originY) - glm::vec3(-0.2f,-1.0f,-0.3f) * 20.0f;
+	glm::vec3 sunPos = glm::vec3(originX+chunkWidth * xMapChunks, 0, originY) - glm::vec3(-0.2f,-1.0f,-0.3f) * 200.0f;
 	std::cout << "sun pos " << glm::to_string(sunPos) << std::endl;
-
 	// Background
 	glClearColor(0.2f, 0.2f, 0.25f, 0.0f);
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
-
 	// Our 3D character
 	glm::mat4 modelMatrix = glm::mat4();
-	modelMatrix = glm::translate(modelMatrix, glm::vec3(originX+3.0f,5.0f,originY));
+	modelMatrix = glm::translate(modelMatrix, glm::vec3(originX-40.0f,5.0f,originY-30.0f));
 	modelMatrix = glm::scale(modelMatrix, glm::vec3(0.05f,0.05f,0.05f));
 	
-	Entity bot2("../src/model/bot/bot.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
+	//Entity bot2("../src/model/bot/bot.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
 	//Entity tree("../src/model/oak/oak.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, false);
 	modelMatrix = glm::rotate(modelMatrix, glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
 	Entity bot1("../src/model/flop/gas.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
@@ -194,10 +194,12 @@ int main(void)
 	float fTime = 0.0f;			// Time for measuring fps
 	unsigned long frames = 0;
 	glm::mat4 viewMatrix, projectionMatrix, lightViewMatrix, vp;
-	projectionMatrix = glm::ortho(-500.0f, 500.0f, -500.0f, 500.0f, depthNear, depthFar);
-	lightViewMatrix = glm::lookAt(sunPos, glm::vec3(originX, 0, originY), lightUp);
+	projectionMatrix = glm::ortho(-1000.0f, 1000.0f, -1000.0f, 1000.0f, depthNear, depthFar);
+	std::cout << "ortho " << glm::to_string(projectionMatrix) << std::endl;
+	lightViewMatrix = glm::lookAt(sunPos, glm::vec3(0.0f,0.0f,0.0f), lightUp);
+	std::cout << "lookat " << glm::to_string(lightViewMatrix) << std::endl;
 	lightViewMatrix = projectionMatrix * lightViewMatrix;
-	
+	std::cout << "light mat " << glm::to_string(lightViewMatrix) << std::endl;
 	Light light = {
 		glm::vec3(0.2,0.2,0.2),
 		glm::vec3(0.3,0.3,0.3),
@@ -225,7 +227,7 @@ int main(void)
 		if (playAnimation) {
 			time += deltaTime * playbackSpeed;
 			bot1.update(time);
-			bot2.update(time);
+			//bot2.update(time);
 		}
 
 		// Rendering
@@ -233,15 +235,16 @@ int main(void)
 		
 		glViewport(0,0,shadowMapWidth,shadowMapHeight);
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+		glGetError();
         glClear(GL_DEPTH_BUFFER_BIT);
-		bot1.render(botDepthID, lightViewMatrix);
-		bot2.render(botDepthID, lightViewMatrix);
-		//tree.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
 		glDisable(GL_CULL_FACE);
 		mountains.render(camera.Position, terrainDepthID, treeDepthID, lightViewMatrix);
 		glEnable(GL_CULL_FACE);
+		bot1.render(botDepthID, lightViewMatrix);
+		//bot2.render(botDepthID, lightViewMatrix);
+		//tree.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		//glViewport(0,0,windowWidth,windowHeight);
+		glViewport(0,0,windowWidth*4,windowHeight*4);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
@@ -255,7 +258,7 @@ int main(void)
 		viewMatrix = glm::mat4(glm::mat3(camera.GetViewMatrix()));
 		glm::mat4 vpSkybox = projectionMatrix * viewMatrix;
 		
-		bot2.render(vp, camera.Position, shadow, light);
+		//bot2.render(vp, camera.Position, shadow, light);
 		bot1.render(vp, camera.Position, shadow, light);
 		//tree.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
 		glDisable(GL_CULL_FACE);
