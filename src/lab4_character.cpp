@@ -170,12 +170,12 @@ int main(void)
 	// Our 3D character
 	glm::mat4 modelMatrix = glm::mat4();
 	modelMatrix = glm::translate(modelMatrix, glm::vec3(originX-40.0f,5.0f,originY-30.0f));
-	modelMatrix = glm::scale(modelMatrix, glm::vec3(0.05f,0.05f,0.05f));
+	modelMatrix = glm::scale(modelMatrix, glm::vec3(0.1f,0.1f,0.1f));
 	
-	//Entity bot2("../src/model/bot/bot.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
+	Entity bot2("../src/model/bot/bot.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
 	//Entity tree("../src/model/oak/oak.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, false);
 	modelMatrix = glm::rotate(modelMatrix, glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
-	Entity bot1("../src/model/flop/gas.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
+	//Entity bot1("../src/model/flop/gas.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
 	Skybox skybox;
 	std::vector<std::string> faces = {
 		"../src/texture/day/right.bmp",
@@ -195,11 +195,11 @@ int main(void)
 	unsigned long frames = 0;
 	glm::mat4 viewMatrix, projectionMatrix, lightViewMatrix, vp;
 	projectionMatrix = glm::ortho(-1000.0f, 1000.0f, -1000.0f, 1000.0f, depthNear, depthFar);
-	std::cout << "ortho " << glm::to_string(projectionMatrix) << std::endl;
+	//std::cout << "ortho " << glm::to_string(projectionMatrix) << std::endl;
 	lightViewMatrix = glm::lookAt(sunPos, glm::vec3(0.0f,0.0f,0.0f), lightUp);
-	std::cout << "lookat " << glm::to_string(lightViewMatrix) << std::endl;
+	//std::cout << "lookat " << glm::to_string(lightViewMatrix) << std::endl;
 	lightViewMatrix = projectionMatrix * lightViewMatrix;
-	std::cout << "light mat " << glm::to_string(lightViewMatrix) << std::endl;
+	//std::cout << "light mat " << glm::to_string(lightViewMatrix) << std::endl;
 	Light light = {
 		glm::vec3(0.2,0.2,0.2),
 		glm::vec3(0.3,0.3,0.3),
@@ -226,8 +226,8 @@ int main(void)
 
 		if (playAnimation) {
 			time += deltaTime * playbackSpeed;
-			bot1.update(time);
-			//bot2.update(time);
+			//bot1.update(time);
+			bot2.update(time);
 		}
 
 		// Rendering
@@ -240,8 +240,8 @@ int main(void)
 		glDisable(GL_CULL_FACE);
 		mountains.render(camera.Position, terrainDepthID, treeDepthID, lightViewMatrix);
 		glEnable(GL_CULL_FACE);
-		bot1.render(botDepthID, lightViewMatrix);
-		//bot2.render(botDepthID, lightViewMatrix);
+		//bot1.render(botDepthID, lightViewMatrix);
+		bot2.render(botDepthID, lightViewMatrix);
 		//tree.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0,0,windowWidth*4,windowHeight*4);
@@ -258,8 +258,8 @@ int main(void)
 		viewMatrix = glm::mat4(glm::mat3(camera.GetViewMatrix()));
 		glm::mat4 vpSkybox = projectionMatrix * viewMatrix;
 		
-		//bot2.render(vp, camera.Position, shadow, light);
-		bot1.render(vp, camera.Position, shadow, light);
+		bot2.render(vp, camera.Position, shadow, light);
+		//bot1.render(vp, camera.Position, shadow, light);
 		//tree.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
 		glDisable(GL_CULL_FACE);
 		mountains.render(vp, camera.Position, shadow, light);

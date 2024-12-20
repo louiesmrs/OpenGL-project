@@ -395,50 +395,52 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 			int mat = mesh.primitives[i].material;
 			if(mat >=0) {
 				auto& material = model.materials[mat];
-				int texidx = material.pbrMetallicRoughness.baseColorTexture.index;
-				const tinygltf::Texture& tex = model.textures[texidx];
-                    if (tex.source > -1) {
-                        GLuint texid;
-                        glGenTextures(1, &texid);
+				if(material.pbrMetallicRoughness.baseColorTexture.index > -1) {
+					int texidx = material.pbrMetallicRoughness.baseColorTexture.index;
+					const tinygltf::Texture& tex = model.textures[texidx];
+						if (tex.source > -1) {
+							GLuint texid;
+							glGenTextures(1, &texid);
 
-                        const tinygltf::Image& image = model.images[tex.source];
+							const tinygltf::Image& image = model.images[tex.source];
 
-                        glBindTexture(GL_TEXTURE_2D, texid);
-                        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-                        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-                        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+							glBindTexture(GL_TEXTURE_2D, texid);
+							glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+							glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+							glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+							glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+							glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-                        GLenum format = GL_RGBA;
-                        if (image.component == 1) {
-                            format = GL_RED;
-                        } else if (image.component == 2) {
-                            format = GL_RG;
-                        } else if (image.component == 3) {
-                            format = GL_RGB;
-                        }
+							GLenum format = GL_RGBA;
+							if (image.component == 1) {
+								format = GL_RED;
+							} else if (image.component == 2) {
+								format = GL_RG;
+							} else if (image.component == 3) {
+								format = GL_RGB;
+							}
 
-                        GLenum type = GL_UNSIGNED_BYTE;
-                        if (image.bits == 16) {
-                            type = GL_UNSIGNED_SHORT;
-                        }
+							GLenum type = GL_UNSIGNED_BYTE;
+							if (image.bits == 16) {
+								type = GL_UNSIGNED_SHORT;
+							}
 
-                        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0,
-                                    format, type, &image.image.at(0));
-                        isTexture = true;
-						textureID = texid;
+							glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0,
+										format, type, &image.image.at(0));
+							textures.push_back(texid);
+					}
 				}
 
-				glm::vec4 baseColorFactor(1.0f); // Default base color factor
+				glm::vec4 baseColorFactor = glm::vec4(1.0f);
 				if(material.pbrMetallicRoughness.baseColorFactor.size() == 4) {
-					std::vector<double> colorFactor = material.pbrMetallicRoughness.baseColorFactor;
+					auto&& colorFactor = material.pbrMetallicRoughness.baseColorFactor;
 					baseColorFactor = glm::vec4(colorFactor[0], colorFactor[1], colorFactor[2], colorFactor[3]);
-					// Use baseColorFactor as needed, for example, pass it to the shader
-					std::cout << "BCF: " << glm::to_string(baseColorFactor) << std::endl;
 					
+					// Use baseColorFactor as needed, for example, pass it to the shader
+					std::cout << "mesh: " << mesh.name << " BCF: " << glm::to_string(baseColorFactor) << std::endl;
 				}
-				glUniform4fv(baseColorFactorID, 1, glm::value_ptr(baseColorFactor));
+				baseColorFactors.push_back(baseColorFactor);
+				
 			}
 			if(instances != 1) {
 				std::cout << "instances: " << instances << std::endl;
@@ -510,13 +512,14 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 	}
 
 	void Entity::drawMesh(const std::vector<PrimitiveObject> &primitiveObjects,
-				tinygltf::Model &model, tinygltf::Mesh &mesh) {
+				tinygltf::Model &model, tinygltf::Mesh &mesh, int &j) {
 		
-
+		
 		for (size_t i = 0; i < mesh.primitives.size(); ++i) 
 		{
-			GLuint vao = primitiveObjects[i].vao;
-			std::map<int, GLuint> vbos = primitiveObjects[i].vbos;
+			//std::cout << mesh.name << " " << " primitive " << i << " j " << j << std::endl; 
+			GLuint vao = primitiveObjects[j+i].vao;
+			std::map<int, GLuint> vbos = primitiveObjects[j+i].vbos;
 
 			glBindVertexArray(vao);
 
@@ -524,6 +527,19 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 			tinygltf::Accessor indexAccessor = model.accessors[primitive.indices];
 
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.at(indexAccessor.bufferView));
+			glUniform4fv(baseColorFactorID, 1, glm::value_ptr(baseColorFactors[j+i]));
+			int matID = mesh.primitives[i].material;
+            if (matID >= 0) {
+				auto&& material = model.materials[matID];
+                int texID = material.pbrMetallicRoughness.baseColorTexture.index;
+                if (texID >= 0) {
+
+					glActiveTexture(GL_TEXTURE0);
+					glBindTexture(GL_TEXTURE_2D,textures[j+i]);
+					glUniform1i(textureSamplerID,0);
+					glUniform1i(isTextureID, true);
+				}
+			}
             if(instances != 1) {
                 // std::cout << "instances: " << instances << std::endl;
                 // std::cout << "vao: " << vao << std::endl;
@@ -539,25 +555,30 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
             }    
             
 			glBindVertexArray(0);
+			
 		}
 	}
 
 	void Entity::drawModelNodes(const std::vector<PrimitiveObject>& primitiveObjects,
-						tinygltf::Model &model, tinygltf::Node &node) {
+						tinygltf::Model &model, tinygltf::Node &node, int &j) {
 		// Draw the mesh at the node, and recursively do so for children nodes
 		if ((node.mesh >= 0) && (node.mesh < model.meshes.size())) {
-			drawMesh(primitiveObjects, model, model.meshes[node.mesh]);
+			drawMesh(primitiveObjects, model, model.meshes[node.mesh],j);
+			j++;
 		}
 		for (size_t i = 0; i < node.children.size(); i++) {
-			drawModelNodes(primitiveObjects, model, model.nodes[node.children[i]]);
+			drawModelNodes(primitiveObjects, model, model.nodes[node.children[i]],j);
 		}
 	}
 	void Entity::drawModel(const std::vector<PrimitiveObject>& primitiveObjects,
 				tinygltf::Model &model) {
 		// Draw all nodes
 		const tinygltf::Scene &scene = model.scenes[model.defaultScene];
+		//std::cout << "scene node size" <<  scene.nodes.size() << std::endl;
+		
 		for (size_t i = 0; i < scene.nodes.size(); ++i) {
-			drawModelNodes(primitiveObjects, model, model.nodes[scene.nodes[i]]);
+			int j = 0;
+			drawModelNodes(primitiveObjects, model, model.nodes[scene.nodes[i]], j);
 		}
 	}
 
@@ -579,7 +600,7 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 			glUniformMatrix4fv(jointMatricesID, skinObjects[0].jointMatrices.size(), GL_FALSE, glm::value_ptr(skinObjects[0].jointMatrices[0]));
 		}
 		glUniform1i(isSkinningID, isSkinning);
-		glUniform1i(isTextureID, isTexture);
+		
 		// -----------------------------------------------------------------
 
 		// Set light data 
@@ -588,9 +609,7 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 		glUniform3fv(specularID, 1, &light.specular[0]);
 		glUniform3fv(directionID, 1, &light.direction[0]);
 		glUniform3fv(viewPosID, 1, &cameraPosition[0]);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D,textureID);
-		glUniform1i(textureSamplerID,0);
+		;
 		glActiveTexture(GL_TEXTURE0+1);
 		glBindTexture(GL_TEXTURE_2D,shadow.shadowMap);
 		glUniform1i(depthSamplerID,1);

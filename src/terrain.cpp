@@ -153,7 +153,7 @@ void Terrain::setup_instancing(std::vector<GLuint> &trees, std::vector<treeCoord
         //std::cout << i << " " << glm::to_string(coord) << std::endl;
         modelMatrices.push_back(model);
     }
-    m = glm::scale(m, glm::vec3(0.1f,0.1f,0.1f));
+    //m = glm::scale(m, glm::vec3(0.5f,0.5f,0.5f));
     // Duplicate trees in all four quadrants
     int originalSize = modelMatrices.size();
     for (int i = 0; i < originalSize; i++) {
@@ -175,7 +175,7 @@ void Terrain::setup_instancing(std::vector<GLuint> &trees, std::vector<treeCoord
     }
     m = glm::rotate(m, glm::radians(135.0f), glm::vec3(0.0f,1.0f,0.0f));
     std::cout << "matrix_Size: " << modelMatrices.size() << std::endl;
-    tree = Entity("../src/model/low/oak.gltf", "../src/shader/tree.vert", "../src/shader/tree.frag",
+    tree = Entity("../src/model/low/low.gltf", "../src/shader/tree.vert", "../src/shader/tree.frag",
         m, false, modelMatrices.size(), modelMatrices);
 }
 
@@ -312,7 +312,7 @@ std::vector<float>  Terrain::generate_biome(const std::vector<float> &vertices, 
             // NOTE: The max height of a vertex is "meshHeight"
             if (vertices[i] <= biomeColors[j].height * meshHeight) {
                 color = biomeColors[j].color;
-                if (j == 2 || j == 1) {
+                if (j == 0) {
                     if (rand() % 10000 < 5) {
                         treeCoords.push_back(treeCoord{vertices[i-1], vertices[i], vertices[i+1], xOffset, yOffset});
                     }

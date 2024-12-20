@@ -69,7 +69,7 @@ public:
     GLuint modelID;
     GLuint isTextureID;
     GLuint baseColorFactorID;
-    GLuint textureID;
+    //GLuint textureID;
     GLuint textureSamplerID;
 	GLuint depthSamplerID;
     GLuint lightSpaceMatrixID;
@@ -81,6 +81,8 @@ public:
     bool isTexture = false;
     bool isInstancing;
     int instances;
+	std::vector<glm::vec4> baseColorFactors;
+	std::vector<GLuint> textures;
     std::vector<glm::mat4> instanceMatrices;
 
 	// Each VAO corresponds to each mesh primitive in the GLTF model
@@ -119,7 +121,6 @@ public:
 		{
 			std::cerr << "Failed to load shaders." << std::endl;
 		}
-
 		// Get a handle for GLSL variables
 		mvpMatrixID = glGetUniformLocation(programID, "MVP");
 		ambientID = glGetUniformLocation(programID, "ambient");
@@ -149,9 +150,9 @@ public:
     void bindMesh(std::vector<PrimitiveObject> &primitiveObjects,
 				tinygltf::Model &model, tinygltf::Mesh &mesh);
     void drawMesh(const std::vector<PrimitiveObject> &primitiveObjects,
-				tinygltf::Model &model, tinygltf::Mesh &mesh);
+				tinygltf::Model &model, tinygltf::Mesh &mesh, int &j);
     void drawModelNodes(const std::vector<PrimitiveObject>& primitiveObjects,
-						tinygltf::Model &model, tinygltf::Node &node);
+						tinygltf::Model &model, tinygltf::Node &node, int &j);
     void drawModel(const std::vector<PrimitiveObject>& primitiveObjects,
 				tinygltf::Model &model);      
     void bindModelNodes(std::vector<PrimitiveObject> &primitiveObjects, 

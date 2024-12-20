@@ -72,17 +72,7 @@ void main()
 
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16);
     vec3 specularL = specular * spec;
-    // perform perspective divide
-    vec3 projCoords = lightSpaceView.xyz / lightSpaceView.w;
-    // transform to [0,1] range
-    projCoords = projCoords * 0.5 + 0.5;
-    // get closest depth value from light's perspective 
-    float existingDepth = texture(shadowMap, projCoords.xy).r; 
-    // get depth of current fragment from light's perspective
-    float depth = projCoords.z;
    
-    //float shadow = (depth >= existingDepth + 1e-4) ? 0.2 : 1.0;
-	// vec3 lighting = (ambientL + (shadow) * (diffuseL + specularL));
 	float shadow = ShadowCalculation(lightSpaceView);
     //float shadow = 0.0;
 	vec3 lighting = (ambientL + (1.0f-shadow) * (diffuseL + specularL));
