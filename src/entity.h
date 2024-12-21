@@ -70,7 +70,8 @@ public:
     GLuint isTextureID;
     GLuint baseColorFactorID;
     //GLuint textureID;
-    GLuint textureSamplerID;
+    GLuint diffuseTextureSamplerID;
+	GLuint normalTextureSamplerID;
 	GLuint depthSamplerID;
     GLuint lightSpaceMatrixID;
 
@@ -136,12 +137,14 @@ public:
 		jointMatricesID = glGetUniformLocation(programID, "jointMat");
 		isSkinningID = glGetUniformLocation(programID, "isSkinning");
         depthSamplerID = glGetUniformLocation(programID, "shadowMap");
-		textureSamplerID = glGetUniformLocation(programID, "tex");
+		diffuseTextureSamplerID = glGetUniformLocation(programID, "diffuseTexture");
+		normalTextureSamplerID = glGetUniformLocation(programID, "normalMapTexture");
 		lightSpaceMatrixID = glGetUniformLocation(programID, "lightSpaceMatrix");
 	}
     void update(float time);
     void render(glm::mat4 cameraMatrix, glm::vec3 cameraPosition, Shadow shadow, Light light);
     void render(GLuint depthID, glm::mat4 vp); 
+	void render(glm::mat4 view, glm::mat4 projection, glm::mat4 lightMat, GLuint deferredPrepass);
     void cleanup();
 	std::vector<SkinObject> prepareSkinning(const tinygltf::Model &model);
 	std::vector<AnimationObject> prepareAnimation(const tinygltf::Model &model);

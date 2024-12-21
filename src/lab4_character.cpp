@@ -120,6 +120,38 @@ static GLuint LoadTextureTileBox(const char *texture_file_path) {
     return texture;
 }
 
+
+// renderQuad() renders a 1x1 XY quad in NDC
+// -----------------------------------------
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+void renderQuad()
+{
+    if (quadVAO == 0)
+    {
+        float quadVertices[] = {
+            // positions        // texture Coords
+            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+        };
+        // setup plane VAO
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    }
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+}
+
  
 int main(void)
 {
@@ -157,6 +189,65 @@ int main(void)
 		std::cerr << "Failed to initialize OpenGL context." << std::endl;
 		return -1;
 	}
+
+
+	// configure g-buffer framebuffer
+    // ------------------------------
+    GLuint gBuffer;
+    glGenFramebuffers(1, &gBuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+    GLuint gPosition, gNormal, gAlbedoSpec, gLightSpacePosition, gBufferDepth;
+    // position color buffer
+    glGenTextures(1, &gPosition);
+    glBindTexture(GL_TEXTURE_2D, gPosition);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, windowWidth, windowHeight, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
+    // normal color buffer
+    glGenTextures(1, &gNormal);
+    glBindTexture(GL_TEXTURE_2D, gNormal);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, windowWidth, windowHeight, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
+    // color + specular color buffer
+    glGenTextures(1, &gAlbedoSpec);
+    glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, windowWidth, windowHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec, 0);
+	// light space position texture
+	glGenTextures(1, &gLightSpacePosition);
+    glBindTexture(GL_TEXTURE_2D, gLightSpacePosition);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, windowWidth, windowHeight, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gLightSpacePosition, 0);
+
+	glGenTextures(1, &gBufferDepth);
+    glBindTexture(GL_TEXTURE_2D, gBufferDepth);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, 
+               windowWidth, windowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); 
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);  
+   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, gBufferDepth, 0);
+    // tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
+    unsigned int attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
+    glDrawBuffers(4, attachments);
+    // create and attach depth buffer (renderbuffer)
+    unsigned int rboDepth;
+    glGenRenderbuffers(1, &rboDepth);
+    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, windowWidth, windowHeight);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+    // finally check if framebuffer is complete
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "Framebuffer not complete!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	// Prepare shadow map size for shadow mapping. Usually this is the size of the window itself, but on some platforms like Mac this can be 2x the size of the window. Use glfwGetFramebufferSize to get the shadow map size properly. 
     //glfwGetFramebufferSize(window, &shadowMapWidth, &shadowMapHeight);
 	std::cout << "shadow width " << shadowMapWidth << std::endl;
@@ -200,7 +291,7 @@ int main(void)
 	Entity bot2("../src/model/bot/bot.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
 	//Entity tree("../src/model/oak/oak.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, false);
 	modelMatrix = glm::rotate(modelMatrix, glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
-	//Entity bot1("../src/model/flop/gas.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
+	Entity bot1("../src/model/flop/gas.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
 	Skybox skybox;
 	std::vector<std::string> faces = {
 		"../src/texture/day/right.bmp",
@@ -240,6 +331,9 @@ int main(void)
 	GLuint botDepthID = LoadShadersFromFile("../src/shader/depthBot.vert", "../src/shader/depth.frag");
 	GLuint terrainDepthID = LoadShadersFromFile("../src/shader/depth.vert", "../src/shader/depth.frag");
 	GLuint treeDepthID = LoadShadersFromFile("../src/shader/depthTree.vert", "../src/shader/depth.frag");
+
+	GLuint botGeometryID = LoadShadersFromFile("../src/shader/geometry-bot.vert", "../src/shader/geometry.frag");
+	GLuint defferedPassID =  LoadShadersFromFile("../src/shader/deferred.vert", "../src/shader/deferred.frag");
 	// Main loop
 	do
 	{
@@ -252,11 +346,17 @@ int main(void)
 
 		if (playAnimation) {
 			time += deltaTime * playbackSpeed;
-			//bot1.update(time);
+			bot1.update(time);
 			bot2.update(time);
 		}
 
+		projectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / windowHeight, zNear, zFar);
+		viewMatrix = camera.GetViewMatrix();
 		// Rendering
+		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		bot1.render(viewMatrix, projectionMatrix, lightViewMatrix, botGeometryID);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		
 		
 		glViewport(0,0,shadowMapWidth,shadowMapHeight);
@@ -266,19 +366,40 @@ int main(void)
 		glDisable(GL_CULL_FACE);
 		mountains.render(camera.Position, terrainDepthID, treeDepthID, lightViewMatrix);
 		glEnable(GL_CULL_FACE);
-		//bot1.render(botDepthID, lightViewMatrix);
+		bot1.render(botDepthID, lightViewMatrix);
 		bot2.render(botDepthID, lightViewMatrix);
-		//tree.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0,0,windowWidth*4,windowHeight*4);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		
+		
+		glUseProgram(defferedPassID);
+		glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, gPosition);
+		glUniform1i(glGetUniformLocation(defferedPassID, "gPosition"),0);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, gNormal);
+		glUniform1i(glGetUniformLocation(defferedPassID, "gNormal"),1);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+		glUniform1i(glGetUniformLocation(defferedPassID, "gAlbedoSpec"),2);
+		 glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, shadow.shadowMap);
+		glUniform1i(glGetUniformLocation(defferedPassID, "shadowMap"),3);
+		glActiveTexture(GL_TEXTURE4);
+        glBindTexture(GL_TEXTURE_2D, gLightSpacePosition);
+		glUniform1i(glGetUniformLocation(defferedPassID, "lightSpaceCoord"),4);
+		glUniformMatrix4fv(glGetUniformLocation(defferedPassID, "lightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(lightViewMatrix));
+
+		glUniform3fv(glGetUniformLocation(defferedPassID, "u_viewPos"), 1, glm::value_ptr(camera.Position));
+
+		glUniform3fv(glGetUniformLocation(defferedPassID, "direction"), 1, glm::value_ptr(light.direction));
+		renderQuad();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0,0,windowWidth*4,windowHeight*4);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-		
-		projectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / windowHeight, zNear, zFar);
-		
-		
-		viewMatrix = camera.GetViewMatrix();
+
 		vp = projectionMatrix * viewMatrix;
 		
 		viewMatrix = glm::mat4(glm::mat3(camera.GetViewMatrix()));
@@ -286,14 +407,13 @@ int main(void)
 		
 		bot2.render(vp, camera.Position, shadow, light);
 		//bot1.render(vp, camera.Position, shadow, light);
-		//tree.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
 		glDisable(GL_CULL_FACE);
 		mountains.render(vp, camera.Position, shadow, light, terrainTex);
 		glEnable(GL_CULL_FACE);
 	
-		
-		
 		skybox.render(vpSkybox);
+
+
 		
 		
 		if (saveDepth) {
@@ -334,6 +454,7 @@ int main(void)
 
 	return 0;
 }
+
 
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode)
 {

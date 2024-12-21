@@ -13,7 +13,8 @@ out vec2 textureCoord;
 out vec3 lightSpaceCoord;
 
 uniform mat4 u_model;
-uniform mat4 MVP;
+uniform mat4 view;
+uniform mat4 projection;
 uniform mat4 jointMat[65];
 uniform bool isSkinning;
 uniform mat4 lightSpaceMatrix;
@@ -32,11 +33,11 @@ void main()
     }
     vec4 position = u_model * skinMat * vec4(vertexPosition, 1.0);
     fragmentPosition = position.xyz / position.w;
-    normal = transpose(inverse(mat3(skinMat))) * vertexNormal;
+    normal = transpose(inverse(mat3(view * skinMat))) * vertexNormal;
     textureCoord = vertexUV;
 
-    vec4 lightSpaceCoord = lightSpaceMatrix * position;
-    lightSpaceCoord = lightSpaceCoord.xyz / lightSpaceCoord.w;
+    vec4 lightSpacePos = lightSpaceMatrix * position;
+    lightSpaceCoord = lightSpacePos.xyz / lightSpacePos.w;
 
-    gl_Position = MVP * position;
+    gl_Position = projection * view * position;
 }

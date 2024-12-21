@@ -22,8 +22,8 @@ void main()
     normal = transpose(inverse(mat3(u_model * aInstanceMatrix))) * vertexNormal;
     textureCoord = vertexUV;
 
-    vec4 lightSpaceCoord = lightSpaceMatrix * position;
-    lightSpaceCoord = lightSpaceCoord.xyz / lightSpaceCoord.w;
+    vec4 lightSpacePosition = lightSpaceMatrix * position;
+    lightSpaceCoord = lightSpacePosition.xyz / lightSpacePosition.w;
 
     gl_Position = MVP * position;
 }

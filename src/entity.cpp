@@ -430,6 +430,42 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 							textures.push_back(texid);
 					}
 				}
+					if(material.normalTexture.index > -1) {
+					int texidx = material.normalTexture.index;
+					const tinygltf::Texture& tex = model.textures[texidx];
+						if (tex.source > -1) {
+							GLuint texid;
+							glGenTextures(1, &texid);
+
+							const tinygltf::Image& image = model.images[tex.source];
+
+							glBindTexture(GL_TEXTURE_2D, texid);
+							glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+							glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+							glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+							glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+							glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+							GLenum format = GL_RGBA;
+							if (image.component == 1) {
+								format = GL_RED;
+							} else if (image.component == 2) {
+								format = GL_RG;
+							} else if (image.component == 3) {
+								format = GL_RGB;
+							}
+
+							GLenum type = GL_UNSIGNED_BYTE;
+							if (image.bits == 16) {
+								type = GL_UNSIGNED_SHORT;
+							}
+
+							glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0,
+										format, type, &image.image.at(0));
+							textures.push_back(texid);
+							std::cout << "normal texure" << std::endl;
+					}
+				}
 
 				glm::vec4 baseColorFactor = glm::vec4(1.0f);
 				if(material.pbrMetallicRoughness.baseColorFactor.size() == 4) {
@@ -533,10 +569,16 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 				auto&& material = model.materials[matID];
                 int texID = material.pbrMetallicRoughness.baseColorTexture.index;
                 if (texID >= 0) {
-
 					glActiveTexture(GL_TEXTURE0);
 					glBindTexture(GL_TEXTURE_2D,textures[j+i]);
-					glUniform1i(textureSamplerID,0);
+					glUniform1i(diffuseTextureSamplerID,0);
+					glUniform1i(isTextureID, true);
+				}
+				texID = material.normalTexture.index;
+                if (texID >= 0) {
+					glActiveTexture(GL_TEXTURE0+1);
+					glBindTexture(GL_TEXTURE_2D,textures[j+i+1]);
+					glUniform1i(normalTextureSamplerID,1);
 					glUniform1i(isTextureID, true);
 				}
 			}
@@ -610,9 +652,9 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 		glUniform3fv(directionID, 1, &light.direction[0]);
 		glUniform3fv(viewPosID, 1, &cameraPosition[0]);
 		;
-		glActiveTexture(GL_TEXTURE0+1);
+		glActiveTexture(GL_TEXTURE0+2);
 		glBindTexture(GL_TEXTURE_2D,shadow.shadowMap);
-		glUniform1i(depthSamplerID,1);
+		glUniform1i(depthSamplerID,2);
 		glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &shadow.lightSpaceView[0][0]);
 		// Draw the GLTF model
 		drawModel(primitiveObjects, model);
@@ -631,6 +673,30 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 		glUniform1i(glGetUniformLocation(depthID, "isSkinning"), isSkinning);
 		drawModel(primitiveObjects, model);
 	}
+
+
+	void Entity::render(glm::mat4 view, glm::mat4 projection, glm::mat4 lightMat, GLuint deferredPrepass) {
+		
+		
+		// Set camera
+		glUseProgram(deferredPrepass);
+		glUniformMatrix4fv(glGetUniformLocation(deferredPrepass, "lightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(lightMat));
+
+		glUniformMatrix4fv(glGetUniformLocation(deferredPrepass, "u_model"), 1, GL_FALSE, &transform[0][0]);
+
+		glUniformMatrix4fv(glGetUniformLocation(deferredPrepass, "view"), 1, GL_FALSE, glm::value_ptr(view));
+
+		glUniformMatrix4fv(glGetUniformLocation(deferredPrepass, "projection"), 1, GL_FALSE, &projection[0][0]);
+
+		if(isSkinning) {
+			glUniformMatrix4fv(glGetUniformLocation(deferredPrepass, "jointMat"), skinObjects[0].jointMatrices.size(), GL_FALSE, glm::value_ptr(skinObjects[0].jointMatrices[0]));
+		}
+		glUniform1i(glGetUniformLocation(deferredPrepass, "isSkinning"), isSkinning);
+		drawModel(primitiveObjects, model);
+	}
+
+
+	
 
 	void Entity::cleanup() {
 		glDeleteProgram(programID);
