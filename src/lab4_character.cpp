@@ -8,6 +8,7 @@
 
 #include <tiny_gltf.h>
 #include <stb/stb_image_write.h>
+#include <stb/stb_image.h>
 
 #include <render/shader.h>
 #include <vector>
@@ -95,6 +96,30 @@ static void saveDepthTexture(GLuint fbo, std::string filename) {
     stbi_write_png(filename.c_str(), width, height, channels, img.data(), width * channels);
 }
 
+static GLuint LoadTextureTileBox(const char *texture_file_path) {
+    int w, h, channels;
+    uint8_t* img = stbi_load(texture_file_path, &w, &h, &channels, 3);
+    GLuint texture;
+    glGenTextures(1, &texture);  
+    glBindTexture(GL_TEXTURE_2D, texture);  
+
+    // To tile textures on a box, we set wrapping to repeat
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
+    if (img) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        std::cout << "Failed to load texture " << texture_file_path << std::endl;
+    }
+    stbi_image_free(img);
+
+    return texture;
+}
+
  
 int main(void)
 {
@@ -175,7 +200,7 @@ int main(void)
 	Entity bot2("../src/model/bot/bot.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
 	//Entity tree("../src/model/oak/oak.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, false);
 	modelMatrix = glm::rotate(modelMatrix, glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
-	Entity bot1("../src/model/flop/gas.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
+	//Entity bot1("../src/model/flop/gas.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
 	Skybox skybox;
 	std::vector<std::string> faces = {
 		"../src/texture/day/right.bmp",
@@ -187,6 +212,7 @@ int main(void)
 	};
 	skybox.initialize(faces, "../src/shader/skybox.vert", "../src/shader/skybox.frag");
    
+	GLuint terrainTex = LoadTextureTileBox("../src/texture/terraintextures.png");
 	Terrain mountains(xMapChunks, yMapChunks, chunkWidth, chunkHeight, originX, originY);
 	// Time and frame rate tracking
 	static double lastTime = glfwGetTime();
@@ -226,7 +252,7 @@ int main(void)
 
 		if (playAnimation) {
 			time += deltaTime * playbackSpeed;
-			bot1.update(time);
+			//bot1.update(time);
 			bot2.update(time);
 		}
 
@@ -240,7 +266,7 @@ int main(void)
 		glDisable(GL_CULL_FACE);
 		mountains.render(camera.Position, terrainDepthID, treeDepthID, lightViewMatrix);
 		glEnable(GL_CULL_FACE);
-		bot1.render(botDepthID, lightViewMatrix);
+		//bot1.render(botDepthID, lightViewMatrix);
 		bot2.render(botDepthID, lightViewMatrix);
 		//tree.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -259,10 +285,10 @@ int main(void)
 		glm::mat4 vpSkybox = projectionMatrix * viewMatrix;
 		
 		bot2.render(vp, camera.Position, shadow, light);
-		bot1.render(vp, camera.Position, shadow, light);
+		//bot1.render(vp, camera.Position, shadow, light);
 		//tree.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
 		glDisable(GL_CULL_FACE);
-		mountains.render(vp, camera.Position, shadow, light);
+		mountains.render(vp, camera.Position, shadow, light, terrainTex);
 		glEnable(GL_CULL_FACE);
 	
 		
