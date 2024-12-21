@@ -64,7 +64,7 @@ public:
 
     // Noise params
     int octaves = 5;
-    float meshHeight = 16;  // Vertical scaling
+    float meshHeight = 12;  // Vertical scaling
     float noiseScale = 64;  // Horizontal scaling
     float persistence = 0.5;
     float lacunarity = 2;

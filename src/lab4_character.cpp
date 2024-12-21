@@ -51,8 +51,8 @@ static float zFar = (float)chunkWidth * (chunk_render_distance);
 
 // Shadow mapping
 static glm::vec3 lightUp(0.0, 1.0, 0.0);
-static int shadowMapWidth;
-static int shadowMapHeight;
+static int shadowMapWidth = 4096;
+static int shadowMapHeight = 4096;
 
 // TODO: set these parameters 
 static float depthNear = 0.1f;
@@ -133,7 +133,7 @@ int main(void)
 		return -1;
 	}
 	// Prepare shadow map size for shadow mapping. Usually this is the size of the window itself, but on some platforms like Mac this can be 2x the size of the window. Use glfwGetFramebufferSize to get the shadow map size properly. 
-    glfwGetFramebufferSize(window, &shadowMapWidth, &shadowMapHeight);
+    //glfwGetFramebufferSize(window, &shadowMapWidth, &shadowMapHeight);
 	std::cout << "shadow width " << shadowMapWidth << std::endl;
 	std::cout << "shadow height " << shadowMapHeight << std::endl;
 	
@@ -160,7 +160,7 @@ int main(void)
 			std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	glm::vec3 sunPos = glm::vec3(originX+chunkWidth * xMapChunks, 0, originY) - glm::vec3(-0.2f,-1.0f,-0.3f) * 200.0f;
+	glm::vec3 sunPos = glm::vec3(originX+chunkWidth*xMapChunks, 0, originY) - glm::vec3(-0.2f,-1.0f,-0.3f) * 800.0f;
 	std::cout << "sun pos " << glm::to_string(sunPos) << std::endl;
 	// Background
 	glClearColor(0.2f, 0.2f, 0.25f, 0.0f);
@@ -175,7 +175,7 @@ int main(void)
 	Entity bot2("../src/model/bot/bot.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
 	//Entity tree("../src/model/oak/oak.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, false);
 	modelMatrix = glm::rotate(modelMatrix, glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
-	//Entity bot1("../src/model/flop/gas.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
+	Entity bot1("../src/model/flop/gas.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
 	Skybox skybox;
 	std::vector<std::string> faces = {
 		"../src/texture/day/right.bmp",
@@ -226,7 +226,7 @@ int main(void)
 
 		if (playAnimation) {
 			time += deltaTime * playbackSpeed;
-			//bot1.update(time);
+			bot1.update(time);
 			bot2.update(time);
 		}
 
@@ -240,7 +240,7 @@ int main(void)
 		glDisable(GL_CULL_FACE);
 		mountains.render(camera.Position, terrainDepthID, treeDepthID, lightViewMatrix);
 		glEnable(GL_CULL_FACE);
-		//bot1.render(botDepthID, lightViewMatrix);
+		bot1.render(botDepthID, lightViewMatrix);
 		bot2.render(botDepthID, lightViewMatrix);
 		//tree.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -259,7 +259,7 @@ int main(void)
 		glm::mat4 vpSkybox = projectionMatrix * viewMatrix;
 		
 		bot2.render(vp, camera.Position, shadow, light);
-		//bot1.render(vp, camera.Position, shadow, light);
+		bot1.render(vp, camera.Position, shadow, light);
 		//tree.render(vp, camera.Position, glm::vec3(0.2,0.2,0.2),glm::vec3(0.3,0.3,0.3),glm::vec3(1.0,1.0,1.0),glm::vec3(-0.2f,-1.0f,-0.3f));
 		glDisable(GL_CULL_FACE);
 		mountains.render(vp, camera.Position, shadow, light);
