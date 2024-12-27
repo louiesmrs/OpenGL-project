@@ -387,11 +387,7 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 				}
 			}
 
-			// Record VAO for later use
-			PrimitiveObject primitiveObject;
-			primitiveObject.vao = vao;
-            primitiveObject.vbos = vbos;
-			primitiveObjects.push_back(primitiveObject);
+			
 			int mat = mesh.primitives[i].material;
 			if(mat >=0) {
 				auto& material = model.materials[mat];
@@ -478,10 +474,12 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 				baseColorFactors.push_back(baseColorFactor);
 				
 			}
+			GLuint instanceMatricesID;
 			if(instances != 1) {
 				std::cout << "instances: " << instances << std::endl;
 				std::cout << "matrix size: " << instanceMatrices.size() << std::endl;
 				std::cout << "vao: " << vao << std::endl;
+				
 				glGenBuffers(1, &instanceMatricesID);
 				glBindBuffer(GL_ARRAY_BUFFER, instanceMatricesID);
 				glBufferData(GL_ARRAY_BUFFER, instances * sizeof(glm::mat4), glm::value_ptr(instanceMatrices[0]), GL_STATIC_DRAW);
@@ -502,7 +500,14 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 				
 			}
 			glBindVertexArray(0);
+			// Record VAO for later use
+			PrimitiveObject primitiveObject;
+			primitiveObject.vao = vao;
+            primitiveObject.vbos = vbos;
+			primitiveObject.instanceVBO = instanceMatricesID;
+			primitiveObjects.push_back(primitiveObject);
 		}
+		
         
 	}
 
@@ -547,6 +552,7 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 		return primitiveObjects;
 	}
 
+
 	void Entity::drawMesh(const std::vector<PrimitiveObject> &primitiveObjects,
 				tinygltf::Model &model, tinygltf::Mesh &mesh, int &j) {
 		
@@ -583,11 +589,12 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 				}
 			}
             if(instances != 1) {
-                // std::cout << "instances: " << instances << std::endl;
-                // std::cout << "vao: " << vao << std::endl;
+                
+				glBindBuffer(GL_ARRAY_BUFFER, primitiveObjects[j+i].instanceVBO);
+				glBufferSubData(GL_ARRAY_BUFFER, 0, instancesInFrustum.size() * sizeof(glm::mat4), instancesInFrustum.data());
                 glDrawElementsInstanced(primitive.mode, indexAccessor.count,
                             indexAccessor.componentType,
-                            BUFFER_OFFSET(indexAccessor.byteOffset), instances);
+                            BUFFER_OFFSET(indexAccessor.byteOffset), instancesInFrustum.size());
                 glGetError();
             
             } else{
@@ -636,7 +643,6 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 		// -----------------------------------------------------------------
 		// Set animation data for linear blend skinning in shader
 		// -----------------------------------------------------------------
-		
 		
 		if(isSkinning) {
 			glUniformMatrix4fv(jointMatricesID, skinObjects[0].jointMatrices.size(), GL_FALSE, glm::value_ptr(skinObjects[0].jointMatrices[0]));
@@ -696,7 +702,55 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 	}
 
 
-	
+	void Entity::render(glm::mat4 cameraMatrix, glm::vec3 cameraPosition, Shadow shadow, Light light, std::vector<glm::mat4> instancesInFrust) {
+		
+		instancesInFrustum = instancesInFrust;
+		// Set camera
+		glUseProgram(programID);
+		glm::mat4 mvp = cameraMatrix;
+		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
+		glUniformMatrix4fv(modelID, 1, GL_FALSE, &transform[0][0]);
+
+		// -----------------------------------------------------------------
+		// Set animation data for linear blend skinning in shader
+		// -----------------------------------------------------------------
+		
+		if(isSkinning) {
+			glUniformMatrix4fv(jointMatricesID, skinObjects[0].jointMatrices.size(), GL_FALSE, glm::value_ptr(skinObjects[0].jointMatrices[0]));
+		}
+		glUniform1i(isSkinningID, isSkinning);
+		
+		// -----------------------------------------------------------------
+
+		// Set light data 
+		glUniform3fv(ambientID, 1, &light.ambient[0]);
+		glUniform3fv(diffuseID, 1, &light.diffuse[0]);
+		glUniform3fv(specularID, 1, &light.specular[0]);
+		glUniform3fv(directionID, 1, &light.direction[0]);
+		glUniform3fv(viewPosID, 1, &cameraPosition[0]);
+		;
+		glActiveTexture(GL_TEXTURE0+2);
+		glBindTexture(GL_TEXTURE_2D,shadow.shadowMap);
+		glUniform1i(depthSamplerID,2);
+		glUniformMatrix4fv(lightSpaceMatrixID, 1, GL_FALSE, &shadow.lightSpaceView[0][0]);
+		// Draw the GLTF model
+		drawModel(primitiveObjects, model);
+	}
+	void Entity::render(GLuint depthID, glm::mat4 vp, std::vector<glm::mat4> instancesInFrust) {
+		
+		instancesInFrustum = instancesInFrust;
+		glUseProgram(depthID);
+		glUniformMatrix4fv(glGetUniformLocation(depthID, "lightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(vp));
+
+		glUniformMatrix4fv(glGetUniformLocation(depthID, "u_model"), 1, GL_FALSE, &transform[0][0]);
+
+		if(isSkinning) {
+			glUniformMatrix4fv(glGetUniformLocation(depthID, "jointMat"), skinObjects[0].jointMatrices.size(), GL_FALSE, glm::value_ptr(skinObjects[0].jointMatrices[0]));
+		}
+		glUniform1i(glGetUniformLocation(depthID, "isSkinning"), isSkinning);
+		drawModel(primitiveObjects, model);
+	}
+
 
 	void Entity::cleanup() {
 		glDeleteProgram(programID);

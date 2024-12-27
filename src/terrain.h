@@ -81,6 +81,7 @@ public:
     std::vector<GLuint> map_chunks;
     std::vector<GLuint> trees;
     std::vector<treeCoord> treeCoords;
+    std::vector<glm::mat4> instanceMatrices;
     Entity tree;
     
 

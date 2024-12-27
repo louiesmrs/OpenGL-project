@@ -35,8 +35,8 @@ static int windowHeight = 768;
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode);
 static void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 
-int xMapChunks = 10;
-int yMapChunks = 10;
+int xMapChunks = 20;
+int yMapChunks = 20;
 int chunkWidth = 127;
 int chunkHeight = 127;
 float originX = (chunkWidth  * xMapChunks) / 2 - chunkWidth / 2;
@@ -226,15 +226,15 @@ int main(void)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gLightSpacePosition, 0);
 
-	glGenTextures(1, &gBufferDepth);
-    glBindTexture(GL_TEXTURE_2D, gBufferDepth);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, 
-               windowWidth, windowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);  
-   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, gBufferDepth, 0);
+// 	glGenTextures(1, &gBufferDepth);
+//     glBindTexture(GL_TEXTURE_2D, gBufferDepth);
+//     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, 
+//                windowWidth, windowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); 
+//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);  
+//    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, gBufferDepth, 0);
     // tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
     unsigned int attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
     glDrawBuffers(4, attachments);
@@ -276,7 +276,7 @@ int main(void)
 			std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	glm::vec3 sunPos = glm::vec3(originX+chunkWidth*xMapChunks, 0, originY) - glm::vec3(-0.2f,-1.0f,-0.3f) * 800.0f;
+	glm::vec3 sunPos = glm::vec3(originX+chunkWidth*xMapChunks/2, 0, originY) - glm::vec3(-0.2f,-1.0f,-0.3f) * 800.0f;
 	std::cout << "sun pos " << glm::to_string(sunPos) << std::endl;
 	// Background
 	glClearColor(0.2f, 0.2f, 0.25f, 0.0f);
@@ -352,7 +352,7 @@ int main(void)
 
 		projectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / windowHeight, zNear, zFar);
 		viewMatrix = camera.GetViewMatrix();
-		// Rendering
+		//Rendering
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		bot1.render(viewMatrix, projectionMatrix, lightViewMatrix, botGeometryID);

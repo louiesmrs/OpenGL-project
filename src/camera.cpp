@@ -13,6 +13,22 @@ glm::mat4 Camera::GetViewMatrix()
     return glm::lookAt(Position, Position + Front, Up);
 }
 
+
+Frustum Camera::createFrustumFromCamera(float aspect, float zNear, float zFar){
+    Frustum     frustum;
+	const float halfVSide = zFar * tanf(Zoom * .5f);
+	const float halfHSide = halfVSide * aspect;
+	const glm::vec3 frontMultFar = zFar * Front;
+
+	frustum.nearFace = {Position + zNear * Front, Front };
+	frustum.farFace = { Position + frontMultFar, -Front };
+	frustum.rightFace = { Position, glm::cross(frontMultFar - Right * halfHSide, Up) };
+	frustum.leftFace = { Position, glm::cross(Up, frontMultFar + Right * halfHSide) };
+	frustum.topFace = { Position, glm::cross(Right, frontMultFar - Up * halfVSide) };
+	frustum.bottomFace = { Position, glm::cross(frontMultFar + Up * halfVSide, Right) };
+	return frustum;
+}
+
 // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
 void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
 {

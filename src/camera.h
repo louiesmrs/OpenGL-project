@@ -6,6 +6,7 @@
 #include <glad/gl.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include "constants.h"
 
 // Defines several possible options for camera movement. Used as abstraction to stay away from window-system specific input methods
 enum Camera_Movement {
@@ -16,6 +17,8 @@ enum Camera_Movement {
     UP,
     DOWN
 };
+
+
 
 // Default camera values
 const float YAW         = 0.0f;
@@ -53,6 +56,7 @@ public:
         updateCameraVectors();
     }
 
+    Frustum createFrustumFromCamera(float aspect, float zNear, float zFar);
 
     void updateCameraVectors();
 

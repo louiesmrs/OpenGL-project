@@ -12,7 +12,7 @@ uniform vec3 ambient;
 uniform vec3 diffuse;
 uniform vec3 specular;
 uniform vec3 direction;
-uniform sampler2D tex;
+uniform sampler2D diffuseTexture;
 uniform vec4 baseColorFactor;
 uniform bool isTexture;
 uniform sampler2D shadowMap;
@@ -59,7 +59,7 @@ void main()
 {
      vec4 color = baseColorFactor;
     if(isTexture) {
-        color =  vec4(texture(tex, uv).rgb, 1.0);
+        color =  vec4(texture(diffuseTexture, uv).rgb, 1.0);
     } 
 	vec3 ambientL = ambient;
     

@@ -31,6 +31,7 @@ struct SkinObject {
 struct PrimitiveObject {
     GLuint vao;
     std::map<int, GLuint> vbos;
+	GLuint instanceVBO;
 };
 
 
@@ -65,7 +66,7 @@ public:
     GLuint viewPosID;
 	GLuint programID;
 	GLuint isSkinningID;
-    GLuint instanceMatricesID;
+    //GLuint instanceMatricesID;
     GLuint modelID;
     GLuint isTextureID;
     GLuint baseColorFactorID;
@@ -85,6 +86,7 @@ public:
 	std::vector<glm::vec4> baseColorFactors;
 	std::vector<GLuint> textures;
     std::vector<glm::mat4> instanceMatrices;
+	std::vector<glm::mat4> instancesInFrustum;
 
 	// Each VAO corresponds to each mesh primitive in the GLTF model
 	
@@ -144,6 +146,8 @@ public:
     void update(float time);
     void render(glm::mat4 cameraMatrix, glm::vec3 cameraPosition, Shadow shadow, Light light);
     void render(GLuint depthID, glm::mat4 vp); 
+	void render(glm::mat4 cameraMatrix, glm::vec3 cameraPosition, Shadow shadow, Light light,std::vector<glm::mat4> instancesInFrustum);
+	void render(GLuint depthID, glm::mat4 vp, std::vector<glm::mat4> instancesInFrustum); 
 	void render(glm::mat4 view, glm::mat4 projection, glm::mat4 lightMat, GLuint deferredPrepass);
     void cleanup();
 	std::vector<SkinObject> prepareSkinning(const tinygltf::Model &model);
@@ -160,7 +164,9 @@ public:
 				tinygltf::Model &model);      
     void bindModelNodes(std::vector<PrimitiveObject> &primitiveObjects, 
 						tinygltf::Model &model,
-						tinygltf::Node &node);            
+						tinygltf::Node &node); 
+	bool isOnOrForwardPlane(const Plane& plane, const glm::vec3 center, const float extent);
+	bool isOnFrustum(const Frustum& camFrustum, const glm::mat4& transform);           
 };
 
 #endif;

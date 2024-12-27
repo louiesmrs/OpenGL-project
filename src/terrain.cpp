@@ -101,9 +101,16 @@ void Terrain::render(glm::mat4 &mvp, glm::vec3 cameraPosition, Shadow shadow, Li
                 glDrawElements(GL_TRIANGLES, nIndices, GL_UNSIGNED_INT, 0);
             }
         }
+    std::vector<glm::mat4> instancesWithinRenderDist;
+    for(glm::mat4& instance : instanceMatrices) {
+        glm::vec3 pos = glm::vec3(instance[3]);
+        if (std::abs(pos.x) <= chunk_render_distance*chunkWidth && std::abs(pos.z) <= chunk_render_distance*chunkHeight) {
+            instancesWithinRenderDist.push_back(instance);
+        }
+    }
     
     glEnable(GL_CULL_FACE);
-    tree.render(mvp, cameraPosition, shadow, light);
+    tree.render(mvp, cameraPosition, shadow, light,instancesWithinRenderDist );
     glDisable(GL_CULL_FACE);
 }
 
@@ -130,18 +137,25 @@ void Terrain::render(glm::vec3 cameraPosition, GLuint terrainDepthID, GLuint tre
                 glBindVertexArray(map_chunks[x + y*xMapChunks]);
                 glDrawElements(GL_TRIANGLES, nIndices, GL_UNSIGNED_INT, 0);
             }
+    }
+    std::vector<glm::mat4> instancesWithinRenderDist;
+    for(glm::mat4& instance : instanceMatrices) {
+        glm::vec3 pos = glm::vec3(instance[3]);
+        if (std::abs(pos.x) <= chunk_render_distance*chunkWidth && std::abs(pos.z) <= chunk_render_distance*chunkHeight) {
+            instancesWithinRenderDist.push_back(instance);
         }
+    }
     
     glEnable(GL_CULL_FACE);
-    tree.render(treeDepthID, vp);
+    tree.render(treeDepthID, vp, instancesWithinRenderDist);
     glDisable(GL_CULL_FACE);
 
 }
 
 
 void Terrain::setup_instancing(std::vector<GLuint> &trees, std::vector<treeCoord> &treeCoords) {
-    std::vector<glm::mat4> modelMatrices;
-    modelMatrices.reserve(treeCoords.size());
+    
+    instanceMatrices.reserve(treeCoords.size());
     std::cout << treeCoords.size() << std::endl;
     // Instancing prep
     glm::mat4 m = glm::mat4(1.0f);
@@ -154,32 +168,32 @@ void Terrain::setup_instancing(std::vector<GLuint> &trees, std::vector<treeCoord
         model = glm::translate(model, glm::vec3(xPos, yPos, zPos));
         glm::vec3 coord = glm::vec3(xPos, yPos, zPos);
         //std::cout << i << " " << glm::to_string(coord) << std::endl;
-        modelMatrices.push_back(model);
+        instanceMatrices.push_back(model);
     }
     //m = glm::scale(m, glm::vec3(0.5f,0.5f,0.5f));
     // Duplicate trees in all four quadrants
-    int originalSize = modelMatrices.size();
+    int originalSize = instanceMatrices.size();
     for (int i = 0; i < originalSize; i++) {
-        glm::mat4 model = modelMatrices[i];
+        glm::mat4 model = instanceMatrices[i];
         glm::vec3 pos = glm::vec3(model[3]);
 
         // First quadrant (already added)
         // Second quadrant
         glm::mat4 model2 = glm::translate(glm::mat4(1.0f), glm::vec3(-pos.x, pos.y, pos.z));
-        modelMatrices.push_back(model2);
+        instanceMatrices.push_back(model2);
 
         // Third quadrant
         glm::mat4 model3 = glm::translate(glm::mat4(1.0f), glm::vec3(-pos.x, pos.y, -pos.z));
-        modelMatrices.push_back(model3);
+        instanceMatrices.push_back(model3);
 
         // Fourth quadrant
         glm::mat4 model4 = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x, pos.y, -pos.z));
-        modelMatrices.push_back(model4);
+        instanceMatrices.push_back(model4);
     }
     m = glm::rotate(m, glm::radians(135.0f), glm::vec3(0.0f,1.0f,0.0f));
-    std::cout << "matrix_Size: " << modelMatrices.size() << std::endl;
+    std::cout << "matrix_Size: " << instanceMatrices.size() << std::endl;
     tree = Entity("../src/model/low/low.gltf", "../src/shader/tree.vert", "../src/shader/bot.frag",
-        m, false, modelMatrices.size(), modelMatrices);
+        m, false, instanceMatrices.size(), instanceMatrices);
 }
 
 
