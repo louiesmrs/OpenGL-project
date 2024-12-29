@@ -39,6 +39,7 @@ class ParticleGenerator {
     void init();
     void render(glm::mat4 MVP, glm::vec3 cameraPosition);
     void setupInstancing();
+    
 
 };
 

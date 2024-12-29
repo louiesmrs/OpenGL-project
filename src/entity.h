@@ -169,8 +169,7 @@ public:
     void bindModelNodes(std::vector<PrimitiveObject> &primitiveObjects, 
 						tinygltf::Model &model,
 						tinygltf::Node &node); 
-	bool isOnOrForwardPlane(const Plane& plane, const glm::vec3 center, const float extent);
-	bool isOnFrustum(const Frustum& camFrustum, const glm::mat4& transform);           
+	glm::vec3 getPosition();           
 };
 
 #endif;

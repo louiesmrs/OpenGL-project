@@ -128,7 +128,7 @@ void Terrain::update(float deltaTime, float particleTime, float chunks, float ch
     bird.setTransform(deltaTime/4,chunks,chunkWidth,origin, 1);
     fox.update(deltaTime);
     fox.setTransform(deltaTime*4,chunks,chunkWidth,origin, 0);
-    float drift = std::fmod(deltaTime * 0.05f, 127.0f * 3.0f);
+    float drift = std::fmod(deltaTime * 0.006f, 127.0f * 3.0f);
     for(ParticleGenerator& pGen : particleGenerators) {
         pGen.update(particleTime, glm::vec3(pGen.center.x,pGen.center.y,pGen.center.z+drift));
     }
@@ -195,7 +195,7 @@ void Terrain::setup_instancing(GLuint particleTex, GLuint particleShader) {
         glm::vec3 coord = glm::vec3(xPos, yPos, zPos);
         std::cout << i << " " << glm::to_string(coord) << std::endl;
         instanceMatrices.push_back(model);
-        ParticleGenerator particleGenerator(particleShader, particleTex, 100, glm::vec3(xPos+originX, yPos, zPos+originY));
+        ParticleGenerator particleGenerator(particleShader, particleTex, 25, glm::vec3(xPos+originX, yPos, zPos+originY-5.0f));
         particleGenerators.push_back(particleGenerator);
     }
     //m = glm::scale(m, glm::vec3(0.5f,0.5f,0.5f));
@@ -209,14 +209,20 @@ void Terrain::setup_instancing(GLuint particleTex, GLuint particleShader) {
         // Second quadrant
         glm::mat4 model2 = glm::translate(glm::mat4(1.0f), glm::vec3(-pos.x, pos.y, pos.z));
         instanceMatrices.push_back(model2);
+        ParticleGenerator particleGenerator1(particleShader, particleTex, 25, glm::vec3(-pos.x+originX, pos.y, pos.z+originY-5.0f));
+        particleGenerators.push_back(particleGenerator1);
 
         // Third quadrant
         glm::mat4 model3 = glm::translate(glm::mat4(1.0f), glm::vec3(-pos.x, pos.y, -pos.z));
         instanceMatrices.push_back(model3);
+        ParticleGenerator particleGenerator2(particleShader, particleTex, 25, glm::vec3(-pos.x+originX, pos.y, -pos.z+originY-5.0f));
+        particleGenerators.push_back(particleGenerator2);
 
         // Fourth quadrant
         glm::mat4 model4 = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x, pos.y, -pos.z));
         instanceMatrices.push_back(model4);
+        ParticleGenerator particleGenerator3(particleShader, particleTex, 25, glm::vec3(pos.x+originX, pos.y, -pos.z+originY-5.0f));
+        particleGenerators.push_back(particleGenerator3);
     }
     glm::mat4 mTree = glm::translate(m, glm::vec3(originX, 0.0f, originY));
     glm::mat4 mBot = glm::translate(m, glm::vec3(originX, 0.0f, originY));

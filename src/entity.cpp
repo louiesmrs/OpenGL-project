@@ -764,6 +764,10 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 		}
 	}
 
+	glm::vec3 Entity::getPosition() {
+		return glm::vec3(transform[3]);
+	}
+
 
 	void Entity::cleanup() {
 		glDeleteProgram(programID);

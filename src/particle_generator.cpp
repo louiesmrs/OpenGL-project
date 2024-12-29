@@ -16,11 +16,11 @@ void ParticleGenerator::setupInstancing() {
 			Particle p;
 
 			float angle = static_cast<float>(rand()) / RAND_MAX * 2.0f * glm::pi<float>();
-			float radius = static_cast<float>(rand()) / RAND_MAX * 3.0f;
+			float radius = static_cast<float>(rand()) / RAND_MAX * 5.0f;
 			float randomX = radius * cos(angle);
 			float randomZ = radius * sin(angle);
 			float randomStartHeight = randomFloatBetween(center.y, center.y+1.0f);
-			float randomSpeed = randomFloatBetween(1.0f,5.0f);
+			float randomSpeed = randomFloatBetween(5.0f,10.0f);
 			float randomLifetime = randomFloatBetween(0.0f,1.0f);
 			p.pos = glm::vec3(center.x + randomX, randomStartHeight, center.z + randomZ);
 			p.scale = randomFloatBetween(0.1f, 1.1f);
@@ -43,13 +43,13 @@ void ParticleGenerator::init() {
     glm::vec3 green = glm::vec3(95.0/255.0, 165.0/255.0, 30.0/255.0);
     GLfloat particle_quad[] = {
         // Positions         // Texture Coords
-        0.0f, 1.0f, 0.0f,    0.0f, 1.0f,  green.r, green.g, green.b, // Top-left
-        0.5f, 0.0f, 0.0f,    1.0f, 0.0f,  green.r, green.g, green.b,  // Bottom-right
+        0.0f, 0.5f, 0.0f,    0.0f, 1.0f,  green.r, green.g, green.b, // Top-left
+        0.25f, 0.0f, 0.0f,    1.0f, 0.0f,  green.r, green.g, green.b,  // Bottom-right
         0.0f, 0.0f, 0.0f,    0.0f, 0.0f,  green.r, green.g, green.b,  // Bottom-left
 
-        0.0f, 1.0f, 0.0f,    0.0f, 1.0f,  green.r, green.g, green.b,  // Top-left
-        0.5f, 1.0f, 0.0f,    1.0f, 1.0f,  green.r, green.g, green.b,  // Top-right
-        0.5f, 0.0f, 0.0f,    1.0f, 0.0f,  green.r, green.g, green.b,   // Bottom-right
+        0.0f, 0.5f, 0.0f,    0.0f, 1.0f,  green.r, green.g, green.b,  // Top-left
+        0.25f, 0.5f, 0.0f,    1.0f, 1.0f,  green.r, green.g, green.b,  // Top-right
+        0.25f, 0.0f, 0.0f,    1.0f, 0.0f,  green.r, green.g, green.b,   // Bottom-right
     }; 
 
     setupInstancing();
@@ -119,11 +119,11 @@ void ParticleGenerator::update(float time, glm::vec3 newCenter) {
 			if (p.life <= 0.0f) {
 				// Reset the particle
 				float angle = static_cast<float>(rand()) / RAND_MAX * 2.0f * glm::pi<float>();
-                float radius = static_cast<float>(rand()) / RAND_MAX * 3.0f;
+                float radius = static_cast<float>(rand()) / RAND_MAX * 5.0f;
                 float randomX = radius * cos(angle);
                 float randomZ = radius * sin(angle);
                 float randomStartHeight = randomFloatBetween(newCenter.y,center.y+1.0f);
-                float randomSpeed = randomFloatBetween(1.0f,5.0f);
+                float randomSpeed = randomFloatBetween(5.0f,10.0f);
                 float randomLifetime = randomFloatBetween(0.0f,1.0f);
                 p.pos = glm::vec3(newCenter.x + randomX, randomStartHeight, newCenter.z + randomZ);
                 p.scale = randomFloatBetween(0.1f, 1.1f);
@@ -132,8 +132,8 @@ void ParticleGenerator::update(float time, glm::vec3 newCenter) {
 				
             }else {
 				// Move particle upward
-                p.pos.z += centerOffset.z;
-                p.pos.y += p.velocity.y * time;
+                //p.pos.z += centerOffset.z;
+                p.pos.y += p.velocity.y * time/2;
                 p.pos.z -= p.velocity.z * time;
 			}
 
