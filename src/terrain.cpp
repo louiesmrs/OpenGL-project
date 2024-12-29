@@ -115,16 +115,23 @@ void Terrain::render(glm::mat4 &mvp, glm::vec3 cameraPosition, Shadow shadow, Li
     fox.render(mvp, cameraPosition, shadow, light, instancesWithinRenderDist);
     bird.render(mvp, cameraPosition, shadow, light, instancesWithinRenderDist);
     goose.render(mvp, cameraPosition, shadow, light, instancesWithinRenderDist);
+    for(ParticleGenerator& pGen : particleGenerators) {
+        pGen.render(mvp,cameraPosition);
+    }
     glDisable(GL_CULL_FACE);
 }
 
 
-void Terrain::update(float deltaTime, float chunks, float chunkWidth, float origin) {
+void Terrain::update(float deltaTime, float particleTime, float chunks, float chunkWidth, float origin) {
     bot.update(deltaTime);
     bird.update(deltaTime);
     bird.setTransform(deltaTime/4,chunks,chunkWidth,origin, 1);
     fox.update(deltaTime);
     fox.setTransform(deltaTime*4,chunks,chunkWidth,origin, 0);
+    float drift = std::fmod(deltaTime * 0.05f, 127.0f * 3.0f);
+    for(ParticleGenerator& pGen : particleGenerators) {
+        pGen.update(particleTime, glm::vec3(pGen.center.x,pGen.center.y,pGen.center.z+drift));
+    }
     goose.update(deltaTime);
 }
 
@@ -171,7 +178,7 @@ void Terrain::render(glm::vec3 cameraPosition, GLuint terrainDepthID, GLuint tre
 }
 
 
-void Terrain::setup_instancing(std::vector<GLuint> &trees, std::vector<treeCoord> &treeCoords) {
+void Terrain::setup_instancing(GLuint particleTex, GLuint particleShader) {
     
     instanceMatrices.reserve(treeCoords.size());
     std::cout << treeCoords.size() << std::endl;
@@ -188,6 +195,8 @@ void Terrain::setup_instancing(std::vector<GLuint> &trees, std::vector<treeCoord
         glm::vec3 coord = glm::vec3(xPos, yPos, zPos);
         std::cout << i << " " << glm::to_string(coord) << std::endl;
         instanceMatrices.push_back(model);
+        ParticleGenerator particleGenerator(particleShader, particleTex, 100, glm::vec3(xPos+originX, yPos, zPos+originY));
+        particleGenerators.push_back(particleGenerator);
     }
     //m = glm::scale(m, glm::vec3(0.5f,0.5f,0.5f));
     // Duplicate trees in all four quadrants

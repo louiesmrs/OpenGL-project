@@ -752,15 +752,15 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 	}
 
 	void Entity::setTransform(float time, float chunks, float chunkWidth, float origin, int xyz) {
-		float drift = std::fmod(time * 0.1f, 127.0f * 3.0f);
-		if(glm::vec3(transform[3]).z + drift < chunks*chunkWidth) {
+		float drift = std::fmod(time * 0.05f, 127.0f * 3.0f);
+		if(glm::vec3(transform[3]).z + drift < origin+(chunks/2)*chunkWidth) {
 			if(xyz == 1) {
 				transform = glm::translate(transform, glm::vec3(0.0f, drift,0.0f ));
 			} else {
 				transform = glm::translate(transform, glm::vec3(0.0f, 0.0f, drift ));
 			}
 		} else {
-			transform = glm::translate(transform, glm::vec3(origin, 0.0f, origin));
+			transform = originPosition;
 		}
 	}
 

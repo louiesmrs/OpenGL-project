@@ -23,7 +23,6 @@
 #include "entity.h"
 #include "terrain.h"
 #include "constants.h"
-#include "particle_generator.h"
 
 
 
@@ -287,13 +286,6 @@ int main(void)
 	// Our 3D character
 	glm::mat4 modelMatrix = glm::mat4();
 	Entity quad("../src/model/quad/quad.gltf", "../src/shader/deferred.vert", "../src/shader/deferred.frag", modelMatrix, false);
-	modelMatrix = glm::translate(modelMatrix, glm::vec3(originX-40.0f,5.0f,originY-30.0f));
-	modelMatrix = glm::scale(modelMatrix, glm::vec3(0.1f,0.1f,0.1f));
-	
-	//Entity bot2("../src/model/bot/bot.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
-	//Entity tree("../src/model/oak/oak.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, false);
-	modelMatrix = glm::rotate(modelMatrix, glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
-	//Entity bot1("../src/model/flop/gas.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
 	Skybox skybox;
 	std::vector<std::string> faces = {
 		"../src/texture/day/right.bmp",
@@ -304,9 +296,11 @@ int main(void)
 		"../src/texture/day/back.bmp"
 	};
 	skybox.initialize(faces, "../src/shader/skybox.vert", "../src/shader/skybox.frag");
-   
+	GLuint particleTex = LoadTextureTileBox("../src/texture/particles/particle.png");
+	GLuint particleShaderID =  LoadShadersFromFile("../src/shader/particle.vert", "../src/shader/particle.frag");
 	GLuint terrainTex = LoadTextureTileBox("../src/texture/terraintextures.png");
 	Terrain mountains(xMapChunks, yMapChunks, chunkWidth, chunkHeight, originX, originY);
+	mountains.setup_instancing(particleTex, particleShaderID);
 	// Time and frame rate tracking
 	static double lastTime = glfwGetTime();
 	float time = 0.0f;			// Animation time 
@@ -337,9 +331,7 @@ int main(void)
 	GLuint botGeometryID = LoadShadersFromFile("../src/shader/geometry-bot.vert", "../src/shader/geometry.frag");
 	GLuint defferedPassID =  LoadShadersFromFile("../src/shader/deferred.vert", "../src/shader/deferred.frag");
 
-	GLuint particleTex = LoadTextureTileBox("../src/texture/particles/fire.jpg");
-	GLuint particleShaderID =  LoadShadersFromFile("../src/shader/particle.vert", "../src/shader/particle.frag");
-	ParticleGenerator pGenerator(particleShaderID, particleTex, 1000, glm::vec3(originX-40.0f,5.0f,originY-30.0f));
+	
 	// Main loop
 	do
 	{
@@ -354,9 +346,9 @@ int main(void)
 			time += deltaTime * playbackSpeed;
 			//bot1.update(time);
 			//bot2.update(time);
-			mountains.update(time,(float)xMapChunks,(float)chunkWidth,originX);
+			mountains.update(time, deltaTime,(float)xMapChunks,(float)chunkWidth,originX);
 		}
-		pGenerator.update(deltaTime);
+	
 
 		projectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / windowHeight, zNear, zFar);
 		viewMatrix = camera.GetViewMatrix();
@@ -429,7 +421,6 @@ int main(void)
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		//bot2.render(vp, camera.Position, shadow, light);
-		pGenerator.render(vp, camera.Position);
 		//bot1.render(vp, camera.Position, shadow, light);
 		glDisable(GL_CULL_FACE);
 		mountains.render(vp, camera.Position, shadow, light, terrainTex);
@@ -480,24 +471,6 @@ int main(void)
 
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode)
 {
-	// if (key == GLFW_KEY_UP && action == GLFW_PRESS)
-	// {
-	// 	playbackSpeed += 1.0f;
-	// 	if (playbackSpeed > 10.0f) 
-	// 		playbackSpeed = 10.0f;
-	// }
-
-	// if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
-	// {
-	// 	playbackSpeed -= 1.0f;
-	// 	if (playbackSpeed < 1.0f) {
-	// 		playbackSpeed = 1.0f;
-	// 	}
-	// }
-
-	// if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-	// 	playAnimation = !playAnimation;
-	// }
 
 	std::cout << "pos: " << glm::to_string(camera.Position) << std::endl;
 	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)

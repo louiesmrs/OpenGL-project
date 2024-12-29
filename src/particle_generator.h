@@ -35,7 +35,7 @@ class ParticleGenerator {
 
 
     ParticleGenerator(GLuint shader, GLuint texture, unsigned int amount, glm::vec3 center);
-    void update(float time);
+    void update(float time, glm::vec3 center);
     void init();
     void render(glm::mat4 MVP, glm::vec3 cameraPosition);
     void setupInstancing();

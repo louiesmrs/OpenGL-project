@@ -16,14 +16,14 @@ void ParticleGenerator::setupInstancing() {
 			Particle p;
 
 			float angle = static_cast<float>(rand()) / RAND_MAX * 2.0f * glm::pi<float>();
-			float radius = static_cast<float>(rand()) / RAND_MAX * 10.0f;
+			float radius = static_cast<float>(rand()) / RAND_MAX * 3.0f;
 			float randomX = radius * cos(angle);
 			float randomZ = radius * sin(angle);
-			float randomStartHeight = randomFloatBetween(center.y, 10.0f);
-			float randomSpeed = randomFloatBetween(5.0f,15.0f);
+			float randomStartHeight = randomFloatBetween(center.y, center.y+1.0f);
+			float randomSpeed = randomFloatBetween(1.0f,5.0f);
 			float randomLifetime = randomFloatBetween(0.0f,1.0f);
 			p.pos = glm::vec3(center.x + randomX, randomStartHeight, center.z + randomZ);
-			p.scale = randomFloatBetween(1.0f, 3.0f);
+			p.scale = randomFloatBetween(0.1f, 1.1f);
 			p.velocity = glm::vec3(randomSpeed);
 			p.life = randomLifetime;
 
@@ -40,18 +40,19 @@ void ParticleGenerator::setupInstancing() {
 
 void ParticleGenerator::init() {
     GLuint VBO;
+    glm::vec3 green = glm::vec3(95.0/255.0, 165.0/255.0, 30.0/255.0);
     GLfloat particle_quad[] = {
-        0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-        1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+        // Positions         // Texture Coords
+        0.0f, 1.0f, 0.0f,    0.0f, 1.0f,  green.r, green.g, green.b, // Top-left
+        0.5f, 0.0f, 0.0f,    1.0f, 0.0f,  green.r, green.g, green.b,  // Bottom-right
+        0.0f, 0.0f, 0.0f,    0.0f, 0.0f,  green.r, green.g, green.b,  // Bottom-left
 
-        0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-        1.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-        1.0f, 0.0f, 0.0f, 1.0f, 0.0f
+        0.0f, 1.0f, 0.0f,    0.0f, 1.0f,  green.r, green.g, green.b,  // Top-left
+        0.5f, 1.0f, 0.0f,    1.0f, 1.0f,  green.r, green.g, green.b,  // Top-right
+        0.5f, 0.0f, 0.0f,    1.0f, 0.0f,  green.r, green.g, green.b,   // Bottom-right
     }; 
 
     setupInstancing();
-
 
     glGenVertexArrays(1, &this->VAO);
     glGenBuffers(1, &VBO);
@@ -61,9 +62,11 @@ void ParticleGenerator::init() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(particle_quad), particle_quad, GL_STATIC_DRAW);
     // set mesh attributes
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
 
     glGenBuffers(1, &instanceID);
     glBindBuffer(GL_ARRAY_BUFFER, instanceID);
@@ -90,8 +93,24 @@ void ParticleGenerator::init() {
     mvpMatrixID = glGetUniformLocation(shaderID, "MVP");
 }
 
+void updateInstances(const std::vector<glm::mat4>& instanceTransforms, GLuint instanceID) {
+		// Update instance buffer
+		glBindBuffer(GL_ARRAY_BUFFER, instanceID);
+		static size_t currentBufferSize = 0;
+		size_t newSize = instanceTransforms.size() * sizeof(glm::mat4);
+		if (newSize > currentBufferSize) {
+			glBufferData(GL_ARRAY_BUFFER, newSize, nullptr, GL_DYNAMIC_DRAW);
+			currentBufferSize = newSize;
+		}
+		glBufferSubData(GL_ARRAY_BUFFER, 0, newSize, instanceTransforms.data());
 
-void ParticleGenerator::update(float time) {
+	;
+	}
+
+
+
+void ParticleGenerator::update(float time, glm::vec3 newCenter) {
+    glm::vec3 centerOffset = newCenter - center;
     for (size_t i = 0; i < particles.size(); ++i) {
 			Particle& p = particles[i];
 
@@ -100,20 +119,22 @@ void ParticleGenerator::update(float time) {
 			if (p.life <= 0.0f) {
 				// Reset the particle
 				float angle = static_cast<float>(rand()) / RAND_MAX * 2.0f * glm::pi<float>();
-                float radius = static_cast<float>(rand()) / RAND_MAX * 10.0f;
+                float radius = static_cast<float>(rand()) / RAND_MAX * 3.0f;
                 float randomX = radius * cos(angle);
                 float randomZ = radius * sin(angle);
-                float randomStartHeight = randomFloatBetween(center.y, 10.0f);
-                float randomSpeed = randomFloatBetween(5.0f,15.0f);
+                float randomStartHeight = randomFloatBetween(newCenter.y,center.y+1.0f);
+                float randomSpeed = randomFloatBetween(1.0f,5.0f);
                 float randomLifetime = randomFloatBetween(0.0f,1.0f);
-                p.pos = glm::vec3(center.x + randomX, randomStartHeight, center.z + randomZ);
-                p.scale = randomFloatBetween(1.0f, 3.0f);
+                p.pos = glm::vec3(newCenter.x + randomX, randomStartHeight, newCenter.z + randomZ);
+                p.scale = randomFloatBetween(0.1f, 1.1f);
                 p.velocity = glm::vec3(randomSpeed);
                 p.life = randomLifetime;
 				
             }else {
 				// Move particle upward
-				p.pos -= p.velocity * time;
+                p.pos.z += centerOffset.z;
+                p.pos.y += p.velocity.y * time;
+                p.pos.z -= p.velocity.z * time;
 			}
 
 			// Update instance transform
@@ -122,6 +143,8 @@ void ParticleGenerator::update(float time) {
 			transform = glm::scale(transform, glm::vec3(p.scale));
 			instanceMatrices[i] = transform;
 		}
+        updateInstances(instanceMatrices, instanceID);
+        center = newCenter;
 
 }
 
@@ -136,11 +159,10 @@ void ParticleGenerator::render(glm::mat4 MVP, glm::vec3 cameraPosition) {
     glBindTexture(GL_TEXTURE_2D, textureID);
     glUniform1i(textureSamplerID, 0);
 
-   
     glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &MVP[0][0]);
     glUniform3fv(viewPosID, 1, &cameraPosition[0]);
 
-    glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0, instanceMatrices.size());
-
+    glDrawArraysInstanced(GL_TRIANGLES, 0, 6, instanceMatrices.size());
+   
     glDisable(GL_BLEND);
 }

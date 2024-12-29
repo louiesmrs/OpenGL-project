@@ -79,6 +79,7 @@ public:
 	tinygltf::Model model;
 
 	glm::mat4 transform;
+	glm::mat4 originPosition;
 	bool isSkinning;
     bool isTexture = false;
     bool isInstancing;
@@ -109,6 +110,7 @@ public:
 		if (!loadModel(model, modelPath)) {
 			return;
 		}
+		originPosition = transform;
 
 		primitiveObjects = bindModel(model);
 

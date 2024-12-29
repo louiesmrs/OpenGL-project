@@ -16,6 +16,7 @@
 #include "entity.h"
 #include "constants.h"
 #include <render/shader.h>
+#include "particle_generator.h"
 
 
 // Structs
@@ -79,6 +80,7 @@ public:
     std::vector<GLuint> trees;
     std::vector<treeCoord> treeCoords;
     std::vector<glm::mat4> instanceMatrices;
+    std::vector<ParticleGenerator> particleGenerators;
     Entity tree;
     Entity bot;
     Entity fox;
@@ -106,7 +108,7 @@ public:
         depthSamplerID = glGetUniformLocation(programID, "shadowMap");
         lightSpaceMatrixID = glGetUniformLocation(programID, "lightSpaceMatrix");
         trees.reserve(xMapChunks * yMapChunks);
-        setup_instancing(trees, treeCoords);
+
         
     }
     std::vector<int> generate_indices();
@@ -117,8 +119,8 @@ public:
     void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset, std::vector<treeCoord> &treeCoords);
     void render(glm::mat4 &mvp, glm::vec3 cameraPosition, Shadow shadow, Light light, GLuint tex);
     void render(glm::vec3 cameraPosition, GLuint terrainDepthID, GLuint treeDepthID, glm::mat4 vp, GLuint botDepthID);
-    void setup_instancing(std::vector<GLuint> &plant_chunk, std::vector<treeCoord> &treeCoords);
-    void update(float deltaTime, float chunks, float chunkWidth, float origin);
+    void setup_instancing(GLuint particleTex, GLuint particleShader);
+    void update(float deltaTime, float particleTime, float chunks, float chunkWidth, float origin);
 
 };
 
