@@ -108,6 +108,13 @@ void Terrain::render(glm::mat4 &mvp, glm::vec3 cameraPosition, Shadow shadow, Li
             instancesWithinRenderDist.push_back(instance);
         }
     }
+    std::vector<ParticleGenerator> particleGeneratorWithinRenderDist;
+    for(ParticleGenerator& pGen : particleGenerators) {
+        glm::vec3 pos = pGen.center;
+        if (std::abs(pos.x-originX) <= chunk_render_distance*chunkWidth && std::abs(pos.z-originY-5.0f) <= chunk_render_distance*chunkHeight) {
+            particleGeneratorWithinRenderDist.push_back(pGen);
+        }
+    }
     
     glEnable(GL_CULL_FACE);
     tree.render(mvp, cameraPosition, shadow, light,instancesWithinRenderDist );
@@ -115,7 +122,7 @@ void Terrain::render(glm::mat4 &mvp, glm::vec3 cameraPosition, Shadow shadow, Li
     fox.render(mvp, cameraPosition, shadow, light, instancesWithinRenderDist);
     bird.render(mvp, cameraPosition, shadow, light, instancesWithinRenderDist);
     goose.render(mvp, cameraPosition, shadow, light, instancesWithinRenderDist);
-    for(ParticleGenerator& pGen : particleGenerators) {
+    for(ParticleGenerator& pGen : particleGeneratorWithinRenderDist) {
         pGen.render(mvp,cameraPosition);
     }
     glDisable(GL_CULL_FACE);
@@ -160,12 +167,15 @@ void Terrain::render(glm::vec3 cameraPosition, GLuint terrainDepthID, GLuint tre
             }
     }
     std::vector<glm::mat4> instancesWithinRenderDist;
+    
     for(glm::mat4& instance : instanceMatrices) {
         glm::vec3 pos = glm::vec3(instance[3]);
         if (std::abs(pos.x) <= chunk_render_distance*chunkWidth && std::abs(pos.z) <= chunk_render_distance*chunkHeight) {
             instancesWithinRenderDist.push_back(instance);
         }
     }
+
+      
     
     glEnable(GL_CULL_FACE);
     tree.render(treeDepthID, vp, instancesWithinRenderDist);
@@ -195,7 +205,7 @@ void Terrain::setup_instancing(GLuint particleTex, GLuint particleShader) {
         glm::vec3 coord = glm::vec3(xPos, yPos, zPos);
         std::cout << i << " " << glm::to_string(coord) << std::endl;
         instanceMatrices.push_back(model);
-        ParticleGenerator particleGenerator(particleShader, particleTex, 25, glm::vec3(xPos+originX, yPos, zPos+originY-5.0f));
+        ParticleGenerator particleGenerator(particleShader, particleTex, 10, glm::vec3(xPos+originX, yPos, zPos+originY-5.0f));
         particleGenerators.push_back(particleGenerator);
     }
     //m = glm::scale(m, glm::vec3(0.5f,0.5f,0.5f));
@@ -209,19 +219,19 @@ void Terrain::setup_instancing(GLuint particleTex, GLuint particleShader) {
         // Second quadrant
         glm::mat4 model2 = glm::translate(glm::mat4(1.0f), glm::vec3(-pos.x, pos.y, pos.z));
         instanceMatrices.push_back(model2);
-        ParticleGenerator particleGenerator1(particleShader, particleTex, 25, glm::vec3(-pos.x+originX, pos.y, pos.z+originY-5.0f));
+        ParticleGenerator particleGenerator1(particleShader, particleTex, 10, glm::vec3(-pos.x+originX, pos.y, pos.z+originY-5.0f));
         particleGenerators.push_back(particleGenerator1);
 
         // Third quadrant
         glm::mat4 model3 = glm::translate(glm::mat4(1.0f), glm::vec3(-pos.x, pos.y, -pos.z));
         instanceMatrices.push_back(model3);
-        ParticleGenerator particleGenerator2(particleShader, particleTex, 25, glm::vec3(-pos.x+originX, pos.y, -pos.z+originY-5.0f));
+        ParticleGenerator particleGenerator2(particleShader, particleTex, 10, glm::vec3(-pos.x+originX, pos.y, -pos.z+originY-5.0f));
         particleGenerators.push_back(particleGenerator2);
 
         // Fourth quadrant
         glm::mat4 model4 = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x, pos.y, -pos.z));
         instanceMatrices.push_back(model4);
-        ParticleGenerator particleGenerator3(particleShader, particleTex, 25, glm::vec3(pos.x+originX, pos.y, -pos.z+originY-5.0f));
+        ParticleGenerator particleGenerator3(particleShader, particleTex, 10, glm::vec3(pos.x+originX, pos.y, -pos.z+originY-5.0f));
         particleGenerators.push_back(particleGenerator3);
     }
     glm::mat4 mTree = glm::translate(m, glm::vec3(originX, 0.0f, originY));

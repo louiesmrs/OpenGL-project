@@ -54,7 +54,7 @@ public:
     GLuint lightSpaceMatrixID;
 
     float WATER_HEIGHT = 0.1;
-    int chunk_render_distance = 3;
+    int chunk_render_distance = 4;
     int xMapChunks;
     int yMapChunks;
     int chunkWidth;

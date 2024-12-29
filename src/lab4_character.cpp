@@ -35,13 +35,13 @@ static int windowHeight = 768;
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode);
 static void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 
-int xMapChunks = 10;
-int yMapChunks = 10;
+int xMapChunks = 20;
+int yMapChunks = 20;
 int chunkWidth = 127;
 int chunkHeight = 127;
 float originX = (chunkWidth  * xMapChunks) / 2 - chunkWidth / 2;
 float originY = (chunkHeight * yMapChunks) / 2 - chunkHeight / 2;
-int chunk_render_distance = 3;
+int chunk_render_distance = 4;
 // Camera
 static glm::vec3 eye_center(originX-30.0f, 20.0f, originY-30.0f);
 static glm::vec3 lookat(0.0f, 0.0f, 0.0f);
@@ -344,8 +344,6 @@ int main(void)
 
 		if (playAnimation) {
 			time += deltaTime * playbackSpeed;
-			//bot1.update(time);
-			//bot2.update(time);
 			mountains.update(time, deltaTime,(float)xMapChunks,(float)chunkWidth,originX);
 		}
 	
@@ -366,8 +364,6 @@ int main(void)
 		glDisable(GL_CULL_FACE);
 		mountains.render(camera.Position, terrainDepthID, treeDepthID, lightViewMatrix, botDepthID);
 		glEnable(GL_CULL_FACE);
-		//bot1.render(botDepthID, lightViewMatrix);
-		//bot2.render(botDepthID, lightViewMatrix);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0,0,windowWidth*4,windowHeight*4);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		
@@ -420,8 +416,6 @@ int main(void)
         // glBlitFramebuffer(0, 0, windowWidth, windowHeight, 0, 0, windowWidth, windowHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		//bot2.render(vp, camera.Position, shadow, light);
-		//bot1.render(vp, camera.Position, shadow, light);
 		glDisable(GL_CULL_FACE);
 		mountains.render(vp, camera.Position, shadow, light, terrainTex);
 		glEnable(GL_CULL_FACE);
@@ -459,8 +453,6 @@ int main(void)
 	} // Check if the ESC key was pressed or the window was closed
 	while (!glfwWindowShouldClose(window));
 
-	// Clean up
-	//bot2.cleanup();
 
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();
