@@ -122,9 +122,9 @@ void Terrain::render(glm::mat4 &mvp, glm::vec3 cameraPosition, Shadow shadow, Li
 void Terrain::update(float deltaTime, float chunks, float chunkWidth, float origin) {
     bot.update(deltaTime);
     bird.update(deltaTime);
-    bird.setTransform(deltaTime/4,chunks,chunkWidth,origin);
+    bird.setTransform(deltaTime/4,chunks,chunkWidth,origin, 1);
     fox.update(deltaTime);
-    fox.setTransform(deltaTime*4,chunks,chunkWidth,origin);
+    fox.setTransform(deltaTime*4,chunks,chunkWidth,origin, 0);
     goose.update(deltaTime);
 }
 
@@ -216,7 +216,7 @@ void Terrain::setup_instancing(std::vector<GLuint> &trees, std::vector<treeCoord
     glm::mat4 mFox = glm::scale(mTree, glm::vec3(0.03f, 0.03f, 0.03f));
     glm::mat4 mGoose = glm::scale(mTree, glm::vec3(0.2f, 0.2f, 0.2f));
     mTree = glm::rotate(mTree, glm::radians(135.0f), glm::vec3(0.0f,1.0f,0.0f));
-    //mBird = glm::rotate(mBird, glm::radians(90.0f), glm::vec3(1.0f, 1.0f, 0.0f));
+    mBird = glm::rotate(mBird, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     
     mGoose = glm::rotate(mBot, glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
     // //mBird = glm::rotate(mBird, glm::radians(90.0f), glm::vec3(0.0f,0.0f,1.0f));
