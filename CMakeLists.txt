@@ -27,6 +27,7 @@ add_executable(project_scene
 	src/tiny_gltf.cpp
 	src/entity.cpp
 	src/terrain.cpp
+	src/particle_generator.cpp
 )
 target_link_libraries(project_scene
 	${OPENGL_LIBRARY}

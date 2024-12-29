@@ -111,10 +111,24 @@ void Terrain::render(glm::mat4 &mvp, glm::vec3 cameraPosition, Shadow shadow, Li
     
     glEnable(GL_CULL_FACE);
     tree.render(mvp, cameraPosition, shadow, light,instancesWithinRenderDist );
+    bot.render(mvp, cameraPosition, shadow, light, instancesWithinRenderDist);
+    fox.render(mvp, cameraPosition, shadow, light, instancesWithinRenderDist);
+    bird.render(mvp, cameraPosition, shadow, light, instancesWithinRenderDist);
+    goose.render(mvp, cameraPosition, shadow, light, instancesWithinRenderDist);
     glDisable(GL_CULL_FACE);
 }
 
-void Terrain::render(glm::vec3 cameraPosition, GLuint terrainDepthID, GLuint treeDepthID, glm::mat4 vp) {
+
+void Terrain::update(float deltaTime, float chunks, float chunkWidth, float origin) {
+    bot.update(deltaTime);
+    bird.update(deltaTime);
+    bird.setTransform(deltaTime/4,chunks,chunkWidth,origin);
+    fox.update(deltaTime);
+    fox.setTransform(deltaTime*4,chunks,chunkWidth,origin);
+    goose.update(deltaTime);
+}
+
+void Terrain::render(glm::vec3 cameraPosition, GLuint terrainDepthID, GLuint treeDepthID, glm::mat4 vp, GLuint botDepthID) {
     // Per-frame time logic
     // Measures number of map chunks away from origin map chunk the camera is
     glUseProgram(terrainDepthID);
@@ -148,6 +162,10 @@ void Terrain::render(glm::vec3 cameraPosition, GLuint terrainDepthID, GLuint tre
     
     glEnable(GL_CULL_FACE);
     tree.render(treeDepthID, vp, instancesWithinRenderDist);
+    bot.render(botDepthID, vp, instancesWithinRenderDist);
+    fox.render(botDepthID, vp, instancesWithinRenderDist);
+    bird.render(botDepthID, vp, instancesWithinRenderDist);
+    goose.render(botDepthID, vp, instancesWithinRenderDist);
     glDisable(GL_CULL_FACE);
 
 }
@@ -159,7 +177,8 @@ void Terrain::setup_instancing(std::vector<GLuint> &trees, std::vector<treeCoord
     std::cout << treeCoords.size() << std::endl;
     // Instancing prep
     glm::mat4 m = glm::mat4(1.0f);
-    m = glm::translate(m, glm::vec3(originX, 3.0f, originY));
+
+    
     for (int i = 0; i < treeCoords.size(); i++) {
         glm::mat4 model = glm::mat4(1.0f);
         float xPos = treeCoords[i].xpos + treeCoords[i].xOffset * chunkWidth * (i%10+1);
@@ -167,7 +186,7 @@ void Terrain::setup_instancing(std::vector<GLuint> &trees, std::vector<treeCoord
         float zPos = treeCoords[i].zpos + treeCoords[i].yOffset * chunkHeight * (i%10+1);
         model = glm::translate(model, glm::vec3(xPos, yPos, zPos));
         glm::vec3 coord = glm::vec3(xPos, yPos, zPos);
-        //std::cout << i << " " << glm::to_string(coord) << std::endl;
+        std::cout << i << " " << glm::to_string(coord) << std::endl;
         instanceMatrices.push_back(model);
     }
     //m = glm::scale(m, glm::vec3(0.5f,0.5f,0.5f));
@@ -190,10 +209,29 @@ void Terrain::setup_instancing(std::vector<GLuint> &trees, std::vector<treeCoord
         glm::mat4 model4 = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x, pos.y, -pos.z));
         instanceMatrices.push_back(model4);
     }
-    m = glm::rotate(m, glm::radians(135.0f), glm::vec3(0.0f,1.0f,0.0f));
+    glm::mat4 mTree = glm::translate(m, glm::vec3(originX, 0.0f, originY));
+    glm::mat4 mBot = glm::translate(m, glm::vec3(originX, 0.0f, originY));
+    glm::mat4 mBird = glm::translate(m, glm::vec3(originX, 20.0f, originY));
+    mBot = glm::scale(mBot, glm::vec3(0.1f, 0.1f, 0.1f));
+    glm::mat4 mFox = glm::scale(mTree, glm::vec3(0.03f, 0.03f, 0.03f));
+    glm::mat4 mGoose = glm::scale(mTree, glm::vec3(0.2f, 0.2f, 0.2f));
+    mTree = glm::rotate(mTree, glm::radians(135.0f), glm::vec3(0.0f,1.0f,0.0f));
+    //mBird = glm::rotate(mBird, glm::radians(90.0f), glm::vec3(1.0f, 1.0f, 0.0f));
+    
+    mGoose = glm::rotate(mBot, glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
+    // //mBird = glm::rotate(mBird, glm::radians(90.0f), glm::vec3(0.0f,0.0f,1.0f));
+    
     std::cout << "matrix_Size: " << instanceMatrices.size() << std::endl;
     tree = Entity("../src/model/low/low.gltf", "../src/shader/tree.vert", "../src/shader/bot.frag",
-        m, false, instanceMatrices.size(), instanceMatrices);
+        mTree, false, instanceMatrices.size(), instanceMatrices);
+    bot = Entity("../src/model/bot/bot.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag",
+    mBot, true, instanceMatrices.size(), instanceMatrices);
+    goose = Entity("../src/model/goose/goose.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag",
+    mGoose, true, instanceMatrices.size(), instanceMatrices);
+    fox = Entity("../src/model/fox/fox.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag",
+    mFox, true, instanceMatrices.size(), instanceMatrices);
+    bird = Entity("../src/model/bird/bird.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag",
+        mBird, true, instanceMatrices.size(), instanceMatrices);
 }
 
 
@@ -204,19 +242,19 @@ void Terrain::generate_map_chunk(GLuint &VAO, int xOffset, int yOffset, std::vec
     std::vector<float> noise_map;
     std::vector<float> vertices;
     std::vector<float> normals;
-    colorPlusUV colorsPlusUVs;
+    std::vector<float> uvs;
     
     // Generate map
     indices = generate_indices();
     noise_map = generate_noise_map(xOffset, yOffset);
     vertices = generate_vertices(noise_map);
     normals = generate_normals(indices, vertices);
-    colorsPlusUVs = generate_biome(vertices, treeCoords, xOffset, yOffset);
+    uvs = generate_biome(vertices, treeCoords, xOffset, yOffset);
     
-    GLuint VBO[4], EBO;
+    GLuint VBO[3], EBO;
     
     // Create buffers and arrays
-    glGenBuffers(4, VBO);
+    glGenBuffers(3, VBO);
     glGenBuffers(1, &EBO);
     glGenVertexArrays(1, &VAO);
     
@@ -243,24 +281,13 @@ void Terrain::generate_map_chunk(GLuint &VAO, int xOffset, int yOffset, std::vec
     
     // Bind vertices to VBO
     glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
-    glBufferData(GL_ARRAY_BUFFER, colorsPlusUVs.colors.size() * sizeof(float), &colorsPlusUVs.colors[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(float), &uvs[0], GL_STATIC_DRAW);
     
     // Configure vertex colors attribute
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(2);
-
-    // Bind vertices to VBO
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
-    glBufferData(GL_ARRAY_BUFFER, colorsPlusUVs.uvs.size() * sizeof(float), &colorsPlusUVs.uvs[0], GL_STATIC_DRAW);
-    
-    // Configure vertex colors attribute
-    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(3);
 }
 
-glm::vec3 get_color(int r, int g, int b) {
-    return glm::vec3(r/255.0, g/255.0, b/255.0);
-}
 
 std::vector<float>  Terrain::generate_noise_map(int offsetX, int offsetY) {
     std::vector<float> noiseValues;
@@ -287,9 +314,6 @@ std::vector<float>  Terrain::generate_noise_map(int offsetX, int offsetY) {
                 
                 float perlinValue = perlin_noise(xSample, ySample, p);
                 noiseHeight += perlinValue * amp;
-                
-                // Lacunarity  --> Increase in frequency of octaves
-                // Persistence --> Decrease in amplitude of octaves
                 amp  *= persistence;
                 freq *= lacunarity;
             }
@@ -300,7 +324,6 @@ std::vector<float>  Terrain::generate_noise_map(int offsetX, int offsetY) {
     
     for (int y = 0; y < chunkHeight; y++) {
         for (int x = 0; x < chunkWidth; x++) {
-            // Inverse lerp and scale values to range from 0 to 1
             normalizedNoiseValues.push_back((noiseValues[x + y*chunkWidth] + 1) / maxPossibleHeight);
         }
     }
@@ -308,41 +331,24 @@ std::vector<float>  Terrain::generate_noise_map(int offsetX, int offsetY) {
     return normalizedNoiseValues;
 }
 
-struct terrainColor {
-    terrainColor(float _height, glm::vec3 _color) {
-        height = _height;
-        color = _color;
-    };
-    float height;
-    glm::vec3 color;
-};
 
-colorPlusUV Terrain::generate_biome(const std::vector<float> &vertices, std::vector<treeCoord> &treeCoords, int xOffset, int yOffset) {
-    std::vector<float> colors;
+std::vector<float> Terrain::generate_biome(const std::vector<float> &vertices, std::vector<treeCoord> &treeCoords, int xOffset, int yOffset) {
     std::vector<float> uvs;
-    std::vector<terrainColor> biomeColors;
-    glm::vec3 color = get_color(255, 255, 255);
+    std::vector<float> textureHeights;
     glm::vec2 uv = glm::vec2(0.0f);
     
-    // NOTE: Terrain color height is a value between 0 and 1
-    // biomeColors.push_back(terrainColor(WATER_HEIGHT * 0.5, get_color(60,  95, 190)));   // Deep water
-    // biomeColors.push_back(terrainColor(WATER_HEIGHT,        get_color(60, 100, 190)));  // Shallow water
-    // biomeColors.push_back(terrainColor(0.15, get_color(210, 215, 130)));                // Sand
-    biomeColors.push_back(terrainColor(0.30, get_color( 95, 165,  30)));                // Grass 1
-    biomeColors.push_back(terrainColor(0.40, get_color( 65, 115,  20)));                // Grass 2
-    biomeColors.push_back(terrainColor(0.50, get_color( 90,  65,  60)));                // Rock 1
-    biomeColors.push_back(terrainColor(0.80, get_color( 75,  60,  55)));                // Rock 2
-    biomeColors.push_back(terrainColor(1.00, get_color(255, 255, 255)));                // Snow
+
+    textureHeights.push_back(0.375);                               
+    textureHeights.push_back(0.625);                              
+    textureHeights.push_back(0.95);                
     
-    
-    // Determine which color to assign each vertex by its y-coord
-    // Iterate through vertex y values
     for (int i = 1; i < vertices.size(); i += 3) {
-        for (int j = 0; j < biomeColors.size(); j++) {
+        for (int j = 0; j < textureHeights.size(); j++) {
             // NOTE: The max height of a vertex is "meshHeight"
-            if (vertices[i] <= biomeColors[j].height * meshHeight) {
-                color = biomeColors[j].color;
-                uv = glm::vec2(biomeColors[j].height, 0.5f);
+            if (vertices[i] <= textureHeights[j] * meshHeight) {
+                uv = glm::vec2(textureHeights[j], 0.5f);
+                // uv.x -= static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 0.1f - 0.05f;
+                // uv.y -= static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 0.1f - 0.05f;
                 if (j == 0) {
                     if (rand() % 10000 < 5) {
                         treeCoords.push_back(treeCoord{vertices[i-1], vertices[i], vertices[i+1], xOffset, yOffset});
@@ -351,13 +357,10 @@ colorPlusUV Terrain::generate_biome(const std::vector<float> &vertices, std::vec
                 break;
             }
         }
-        colors.push_back(color.r);
-        colors.push_back(color.g);
-        colors.push_back(color.b);
         uvs.push_back(uv.x);
         uvs.push_back(uv.y);
     }
-    return colorPlusUV {colors, uvs};
+    return uvs;
 }
 
 std::vector<float>  Terrain::generate_normals(const std::vector<int> &indices, const std::vector<float> &vertices) {

@@ -28,24 +28,15 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 		return transform;
 	}
 
-    void computeLocalNodeTransform(const tinygltf::Model& model, const tinygltf::Node& node,
+    void computeLocalNodeTransform(const tinygltf::Model& model, const int nodeIndex,
 	 std::vector<glm::mat4> &localTransforms) {
-		localTransforms.push_back(getNodeTransform(node));
-		for (size_t i = 0; i < node.children.size(); i++) {
-			computeLocalNodeTransform(model, model.nodes[node.children[i]], localTransforms);
-  		}
+		const tinygltf::Node& node = model.nodes[nodeIndex];
+		glm::mat4 localTransform = getNodeTransform(node);
+		localTransforms[nodeIndex] = localTransform;
+		for (int childIndex : node.children) {
+			computeLocalNodeTransform(model, childIndex, localTransforms);
+		}
 	 }
-
-	void computeLocalNodeTransform(const tinygltf::Model& model, 
-		int nodeIndex, 
-		std::vector<glm::mat4> &localTransforms)
-	{
-		tinygltf::Node root = model.nodes[nodeIndex];
-		computeLocalNodeTransform(model, root, localTransforms);
-	}
-
-	
-
 
 	void computeGlobalNodeTransform(const tinygltf::Model& model, 
 		const std::vector<glm::mat4> &localTransforms,
@@ -93,15 +84,14 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 			// ----------------------------------------------
 			// Compute joint matrices
 			// ----------------------------------------------
-			std::vector<glm::mat4> localNodeTransforms(model.nodes.size());
-			for (size_t j = 0; j < model.nodes.size(); ++j) {
-				localNodeTransforms[j] = getNodeTransform(model.nodes[j]);
-			}
-
+			int rootNodeIndex = skin.joints[0];
+			std::vector<glm::mat4> localNodeTransforms(model.nodes.size(), glm::mat4(1.0f));
+			computeLocalNodeTransform(model,rootNodeIndex,localNodeTransforms);
+			glm::mat4 parentTransform(1.0f);
 			std::vector<glm::mat4> globalNodeTransforms(model.nodes.size(), glm::mat4(1.0f));
 			for (size_t j = 0; j < model.scenes[model.defaultScene].nodes.size(); ++j) {
 				int rootNodeIndex = model.scenes[model.defaultScene].nodes[j];
-				computeGlobalNodeTransform(model, localNodeTransforms, rootNodeIndex, glm::mat4(1.0f), globalNodeTransforms);
+				computeGlobalNodeTransform(model, localNodeTransforms, rootNodeIndex, parentTransform, globalNodeTransforms);
 			}
 
 			for (size_t j = 0; j < skin.joints.size(); ++j) {
@@ -241,7 +231,7 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 				memcpy(&previousTranslation, outputPtr + keyframeIndex * 3 * sizeof(float), 3 * sizeof(float));
 				memcpy(&nextTranslation, outputPtr + (keyframeIndex + 1) * 3 * sizeof(float), 3 * sizeof(float));
 
-				glm::vec3 currentTranslation = previousTranslation + interpolationValue * (nextTranslation - previousTranslation);
+				glm::vec3 currentTranslation = glm::mix(previousTranslation, nextTranslation, interpolationValue);
 				nodeTransforms[targetNodeIndex] = glm::translate(nodeTransforms[targetNodeIndex], currentTranslation);
 			} else if (channel.target_path == "rotation") {
 				glm::quat previousRotation, nextRotation;
@@ -255,7 +245,7 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 				memcpy(&previousScale, outputPtr + keyframeIndex * 3 * sizeof(float), 3 * sizeof(float));
 				memcpy(&nextScale, outputPtr + (keyframeIndex + 1) * 3 * sizeof(float), 3 * sizeof(float));
 				
-				glm::vec3 currentScale = previousScale + interpolationValue * (nextScale - previousScale);
+				glm::vec3 currentScale =  glm::mix(previousScale, nextScale, interpolationValue);
 				nodeTransforms[targetNodeIndex] = glm::scale(nodeTransforms[targetNodeIndex], currentScale);
 			}
 		}
@@ -288,6 +278,12 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 					int rootNodeIndex = model.scenes[model.defaultScene].nodes[j];
 					computeGlobalNodeTransform(model, nodeTransforms, rootNodeIndex, glm::mat4(1.0f), globalNodeTransforms);
 				}
+				// glm::mat4 parentTransform(1.0f);
+				// int rootNodeIndex = model.scenes[model.defaultScene].nodes[0];
+				// std::vector<glm::mat4> globalNodeTransforms(skin.joints.size());
+				// computeGlobalNodeTransform(model, nodeTransforms, rootNodeIndex, parentTransform, globalNodeTransforms);
+
+
 
 				updateSkinning(globalNodeTransforms, skin, skinObjects[i]);
 			}
@@ -484,19 +480,19 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 				glBindBuffer(GL_ARRAY_BUFFER, instanceMatricesID);
 				glBufferData(GL_ARRAY_BUFFER, instances * sizeof(glm::mat4), glm::value_ptr(instanceMatrices[0]), GL_STATIC_DRAW);
 			
-				glEnableVertexAttribArray(3);
-				glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
-				glEnableVertexAttribArray(4);
-				glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
 				glEnableVertexAttribArray(5);
-				glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
+				glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
 				glEnableVertexAttribArray(6);
-				glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
+				glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
+				glEnableVertexAttribArray(7);
+				glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
+				glEnableVertexAttribArray(8);
+				glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
 				
-				glVertexAttribDivisor(3, 1);
-				glVertexAttribDivisor(4, 1);
 				glVertexAttribDivisor(5, 1);
 				glVertexAttribDivisor(6, 1);
+				glVertexAttribDivisor(7, 1);
+				glVertexAttribDivisor(8, 1);
 				
 			}
 			glBindVertexArray(0);
@@ -749,6 +745,18 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 		}
 		glUniform1i(glGetUniformLocation(depthID, "isSkinning"), isSkinning);
 		drawModel(primitiveObjects, model);
+	}
+
+	void Entity::render() {
+		drawModel(primitiveObjects,model);
+	}
+
+	void Entity::setTransform(float time, float chunks, float chunkWidth, float origin) {
+		if(glm::vec3(transform[3]).z + std::fmod(time * 0.1f, 127.0f * 3.0f) < chunks*chunkWidth) {
+			transform = glm::translate(transform, glm::vec3(0.0f, 0.0f, std::fmod(time * 0.1f, chunkWidth * 3.0f)));
+		} else {
+			transform = glm::translate(transform, glm::vec3(origin, 0.0f, origin));
+		}
 	}
 
 

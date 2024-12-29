@@ -2,6 +2,7 @@
 layout (location = 0) in vec3 aPos;
 layout(location = 3) in vec4 a_joint;
 layout(location = 4) in vec4 a_weight;
+layout(location = 5) in mat4 aInstanceMatrix;
 
 uniform mat4 lightSpaceMatrix;
 uniform bool isSkinning;
@@ -18,5 +19,5 @@ void main()
         a_weight.z * jointMat[int(a_joint.z)] +
         a_weight.w * jointMat[int(a_joint.w)];
     }
-    gl_Position = lightSpaceMatrix * u_model * skinMat * vec4(aPos, 1.0);
+    gl_Position = lightSpaceMatrix * aInstanceMatrix * u_model * skinMat * vec4(aPos, 1.0);
 }

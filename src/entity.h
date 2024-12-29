@@ -144,8 +144,10 @@ public:
 		lightSpaceMatrixID = glGetUniformLocation(programID, "lightSpaceMatrix");
 	}
     void update(float time);
+	void setTransform(float time, float chunks, float chunkWidth, float origin);
     void render(glm::mat4 cameraMatrix, glm::vec3 cameraPosition, Shadow shadow, Light light);
     void render(GLuint depthID, glm::mat4 vp); 
+	void render();
 	void render(glm::mat4 cameraMatrix, glm::vec3 cameraPosition, Shadow shadow, Light light,std::vector<glm::mat4> instancesInFrustum);
 	void render(GLuint depthID, glm::mat4 vp, std::vector<glm::mat4> instancesInFrustum); 
 	void render(glm::mat4 view, glm::mat4 projection, glm::mat4 lightMat, GLuint deferredPrepass);

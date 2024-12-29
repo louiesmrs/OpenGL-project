@@ -23,6 +23,7 @@
 #include "entity.h"
 #include "terrain.h"
 #include "constants.h"
+#include "particle_generator.h"
 
 
 
@@ -35,8 +36,8 @@ static int windowHeight = 768;
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode);
 static void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 
-int xMapChunks = 20;
-int yMapChunks = 20;
+int xMapChunks = 10;
+int yMapChunks = 10;
 int chunkWidth = 127;
 int chunkHeight = 127;
 float originX = (chunkWidth  * xMapChunks) / 2 - chunkWidth / 2;
@@ -226,24 +227,24 @@ int main(void)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gLightSpacePosition, 0);
 
-// 	glGenTextures(1, &gBufferDepth);
-//     glBindTexture(GL_TEXTURE_2D, gBufferDepth);
-//     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, 
-//                windowWidth, windowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); 
-//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);  
-//    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, gBufferDepth, 0);
+	glGenTextures(1, &gBufferDepth);
+    glBindTexture(GL_TEXTURE_2D, gBufferDepth);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, 
+               windowWidth, windowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); 
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);  
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, gBufferDepth, 0);
     // tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
     unsigned int attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
     glDrawBuffers(4, attachments);
-    // create and attach depth buffer (renderbuffer)
-    unsigned int rboDepth;
-    glGenRenderbuffers(1, &rboDepth);
-    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, windowWidth, windowHeight);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+    // // create and attach depth buffer (renderbuffer)
+    // unsigned int rboDepth;
+    // glGenRenderbuffers(1, &rboDepth);
+    // glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+    // glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, windowWidth, windowHeight);
+    // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
     // finally check if framebuffer is complete
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "Framebuffer not complete!" << std::endl;
@@ -276,7 +277,7 @@ int main(void)
 			std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	glm::vec3 sunPos = glm::vec3(originX+chunkWidth*xMapChunks/2, 0, originY) - glm::vec3(-0.2f,-1.0f,-0.3f) * 800.0f;
+	glm::vec3 sunPos = glm::vec3(originX+chunkWidth*xMapChunks/2, 0, originY) - glm::vec3(-0.2f,-1.0f,-0.3f) * 750.0f;
 	std::cout << "sun pos " << glm::to_string(sunPos) << std::endl;
 	// Background
 	glClearColor(0.2f, 0.2f, 0.25f, 0.0f);
@@ -285,13 +286,14 @@ int main(void)
 	glEnable(GL_CULL_FACE);
 	// Our 3D character
 	glm::mat4 modelMatrix = glm::mat4();
+	Entity quad("../src/model/quad/quad.gltf", "../src/shader/deferred.vert", "../src/shader/deferred.frag", modelMatrix, false);
 	modelMatrix = glm::translate(modelMatrix, glm::vec3(originX-40.0f,5.0f,originY-30.0f));
 	modelMatrix = glm::scale(modelMatrix, glm::vec3(0.1f,0.1f,0.1f));
 	
-	Entity bot2("../src/model/bot/bot.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
+	//Entity bot2("../src/model/bot/bot.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
 	//Entity tree("../src/model/oak/oak.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, false);
 	modelMatrix = glm::rotate(modelMatrix, glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
-	Entity bot1("../src/model/flop/gas.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
+	//Entity bot1("../src/model/flop/gas.gltf", "../src/shader/bot.vert", "../src/shader/bot.frag", modelMatrix, true);
 	Skybox skybox;
 	std::vector<std::string> faces = {
 		"../src/texture/day/right.bmp",
@@ -334,6 +336,10 @@ int main(void)
 
 	GLuint botGeometryID = LoadShadersFromFile("../src/shader/geometry-bot.vert", "../src/shader/geometry.frag");
 	GLuint defferedPassID =  LoadShadersFromFile("../src/shader/deferred.vert", "../src/shader/deferred.frag");
+
+	GLuint particleTex = LoadTextureTileBox("../src/texture/particles/fire.jpg");
+	GLuint particleShaderID =  LoadShadersFromFile("../src/shader/particle.vert", "../src/shader/particle.frag");
+	ParticleGenerator pGenerator(particleShaderID, particleTex, 1000, glm::vec3(originX-40.0f,5.0f,originY-30.0f));
 	// Main loop
 	do
 	{
@@ -346,17 +352,19 @@ int main(void)
 
 		if (playAnimation) {
 			time += deltaTime * playbackSpeed;
-			bot1.update(time);
-			bot2.update(time);
+			//bot1.update(time);
+			//bot2.update(time);
+			mountains.update(time,(float)xMapChunks,(float)chunkWidth,originX);
 		}
+		pGenerator.update(deltaTime);
 
 		projectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / windowHeight, zNear, zFar);
 		viewMatrix = camera.GetViewMatrix();
 		//Rendering
-		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		bot1.render(viewMatrix, projectionMatrix, lightViewMatrix, botGeometryID);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		// glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+		// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		// bot1.render(viewMatrix, projectionMatrix, lightViewMatrix, botGeometryID);
+		// glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		
 		
 		glViewport(0,0,shadowMapWidth,shadowMapHeight);
@@ -364,55 +372,69 @@ int main(void)
 		glGetError();
         glClear(GL_DEPTH_BUFFER_BIT);
 		glDisable(GL_CULL_FACE);
-		mountains.render(camera.Position, terrainDepthID, treeDepthID, lightViewMatrix);
+		mountains.render(camera.Position, terrainDepthID, treeDepthID, lightViewMatrix, botDepthID);
 		glEnable(GL_CULL_FACE);
-		bot1.render(botDepthID, lightViewMatrix);
-		bot2.render(botDepthID, lightViewMatrix);
+		//bot1.render(botDepthID, lightViewMatrix);
+		//bot2.render(botDepthID, lightViewMatrix);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0,0,windowWidth*4,windowHeight*4);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		
 		
-		glUseProgram(defferedPassID);
-		glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gPosition);
-		glUniform1i(glGetUniformLocation(defferedPassID, "gPosition"),0);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, gNormal);
-		glUniform1i(glGetUniformLocation(defferedPassID, "gNormal"),1);
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
-		glUniform1i(glGetUniformLocation(defferedPassID, "gAlbedoSpec"),2);
-		 glActiveTexture(GL_TEXTURE3);
-        glBindTexture(GL_TEXTURE_2D, shadow.shadowMap);
-		glUniform1i(glGetUniformLocation(defferedPassID, "shadowMap"),3);
-		glActiveTexture(GL_TEXTURE4);
-        glBindTexture(GL_TEXTURE_2D, gLightSpacePosition);
-		glUniform1i(glGetUniformLocation(defferedPassID, "lightSpaceCoord"),4);
-		glUniformMatrix4fv(glGetUniformLocation(defferedPassID, "lightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(lightViewMatrix));
-
-		glUniform3fv(glGetUniformLocation(defferedPassID, "u_viewPos"), 1, glm::value_ptr(camera.Position));
-
-		glUniform3fv(glGetUniformLocation(defferedPassID, "direction"), 1, glm::value_ptr(light.direction));
-		renderQuad();
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glViewport(0,0,windowWidth*4,windowHeight*4);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
 
 		vp = projectionMatrix * viewMatrix;
 		
 		viewMatrix = glm::mat4(glm::mat3(camera.GetViewMatrix()));
 		glm::mat4 vpSkybox = projectionMatrix * viewMatrix;
 		
-		bot2.render(vp, camera.Position, shadow, light);
+		
+	
+		
+
+		// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		// glUseProgram(defferedPassID);
+		// glActiveTexture(GL_TEXTURE0);
+        // glBindTexture(GL_TEXTURE_2D, gPosition);
+		// glUniform1i(glGetUniformLocation(defferedPassID, "gPosition"),0);
+        // glActiveTexture(GL_TEXTURE1);
+        // glBindTexture(GL_TEXTURE_2D, gNormal);
+		// glUniform1i(glGetUniformLocation(defferedPassID, "gNormal"),1);
+        // glActiveTexture(GL_TEXTURE2);
+        // glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+		// glUniform1i(glGetUniformLocation(defferedPassID, "gAlbedoSpec"),2);
+		// glActiveTexture(GL_TEXTURE3);
+        // glBindTexture(GL_TEXTURE_2D, shadow.shadowMap);
+		// glUniform1i(glGetUniformLocation(defferedPassID, "shadowMap"),3);
+		// glActiveTexture(GL_TEXTURE4);
+        // glBindTexture(GL_TEXTURE_2D, gLightSpacePosition);
+		// glUniform1i(glGetUniformLocation(defferedPassID, "lightSpaceCoord"),4);
+		// glUniformMatrix4fv(glGetUniformLocation(defferedPassID, "lightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(lightViewMatrix));
+
+		// glUniform3fv(glGetUniformLocation(defferedPassID, "u_viewPos"), 1, glm::value_ptr(camera.Position));
+
+		// glUniform3fv(glGetUniformLocation(defferedPassID, "direction"), 1, glm::value_ptr(light.direction));
+	
+        // quad.render();
+
+		
+		// // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		// // glViewport(0,0,windowWidth*4,windowHeight*4);
+        // // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
+        // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // write to default framebuffer
+        // // blit to default framebuffer. Note that this may or may not work as the internal formats of both the FBO and default framebuffer have to match.
+        // // the internal formats are implementation defined. This works on all of my systems, but if it doesn't on yours you'll likely have to write to the 		
+        // // depth buffer in another shader stage (or somehow see to match the default framebuffer's internal format with the FBO's internal format).
+        // glBlitFramebuffer(0, 0, windowWidth, windowHeight, 0, 0, windowWidth, windowHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		//bot2.render(vp, camera.Position, shadow, light);
+		pGenerator.render(vp, camera.Position);
 		//bot1.render(vp, camera.Position, shadow, light);
 		glDisable(GL_CULL_FACE);
 		mountains.render(vp, camera.Position, shadow, light, terrainTex);
 		glEnable(GL_CULL_FACE);
-	
 		skybox.render(vpSkybox);
-
 
 		
 		

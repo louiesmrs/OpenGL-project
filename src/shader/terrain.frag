@@ -1,7 +1,6 @@
 #version 330 core
 
 in vec3 vertexNorm;
-in vec3 color;
 in vec3 fragPos;
 in vec4 lightSpaceView;
 in vec2 uv;
@@ -78,7 +77,7 @@ void main()
 	float shadow = ShadowCalculation(lightSpaceView);
     //float shadow = 0.0;
 	vec3 lighting = (ambientL + (1.0f-shadow) * (diffuseL + specularL));
-	vec4 v = texture(tex, uv) * vec4(color*lighting,1.0);
+	vec4 v = texture(tex, uv) * vec4(lighting,1.0);
 	v = v / (1.0 + v);
 
 	// Gamma correction

@@ -35,10 +35,7 @@ struct treeCoord {
     }
 };
 
-struct colorPlusUV {
-    std::vector<float> colors;
-    std::vector<float> uvs;
-};
+
 
 class Terrain
 {
@@ -83,6 +80,10 @@ public:
     std::vector<treeCoord> treeCoords;
     std::vector<glm::mat4> instanceMatrices;
     Entity tree;
+    Entity bot;
+    Entity fox;
+    Entity bird;
+    Entity goose;
     
 
     Terrain(int xMapChunks, int yMapChunks, int chunkWidth, int chunkHeight, float originX, float originY)
@@ -112,11 +113,12 @@ public:
     std::vector<float> generate_noise_map(int xOffset, int yOffset);
     std::vector<float> generate_vertices(const std::vector<float> &noise_map);
     std::vector<float> generate_normals(const std::vector<int> &indices, const std::vector<float> &vertices);
-    colorPlusUV generate_biome(const std::vector<float> &vertices, std::vector<treeCoord> &treeCoords, int xOffset, int yOffset);
+    std::vector<float>  generate_biome(const std::vector<float> &vertices, std::vector<treeCoord> &treeCoords, int xOffset, int yOffset);
     void generate_map_chunk(GLuint &VAO, int xOffset, int yOffset, std::vector<treeCoord> &treeCoords);
     void render(glm::mat4 &mvp, glm::vec3 cameraPosition, Shadow shadow, Light light, GLuint tex);
-    void render(glm::vec3 cameraPosition, GLuint terrainDepthID, GLuint treeDepthID, glm::mat4 vp);
+    void render(glm::vec3 cameraPosition, GLuint terrainDepthID, GLuint treeDepthID, glm::mat4 vp, GLuint botDepthID);
     void setup_instancing(std::vector<GLuint> &plant_chunk, std::vector<treeCoord> &treeCoords);
+    void update(float deltaTime, float chunks, float chunkWidth, float origin);
 
 };
 
