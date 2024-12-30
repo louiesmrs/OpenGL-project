@@ -35,8 +35,8 @@ static int windowHeight = 768;
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode);
 static void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 
-int xMapChunks = 20;
-int yMapChunks = 20;
+int xMapChunks = 30;
+int yMapChunks = 30;
 int chunkWidth = 127;
 int chunkHeight = 127;
 float originX = (chunkWidth  * xMapChunks) / 2 - chunkWidth / 2;
@@ -480,7 +480,9 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
         camera.ProcessKeyboard(DOWN, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
-        saveDepth = true;
+        playAnimation = false;
+	if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS)
+        playAnimation = true;
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
 	std::cout << "pos: " << glm::to_string(camera.Position) << std::endl;
